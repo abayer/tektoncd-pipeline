@@ -179,7 +179,7 @@ func TestMakePod(t *testing.T) {
 		desc: "very-long-step-name",
 		b: v1alpha1.BuildSpec{
 			Steps: []corev1.Container{{
-				Name:  "a-sixty-three-character-step-name-to-trigger-max-length-checkxx",
+				Name:  "a-very-long-character-step-name-to-trigger-max-len----and-invalid-characters",
 				Image: "image",
 			}},
 		},
@@ -196,7 +196,37 @@ func TestMakePod(t *testing.T) {
 				VolumeMounts: implicitVolumeMounts,
 				WorkingDir:   workspaceDir,
 			}, {
-				Name:         "build-step-a-sixty-three-character-step-name-to-trigger-max-len",
+				Name:         "build-step-a-very-long-character-step-name-to-trigger-max-len",
+				Image:        "image",
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts,
+				WorkingDir:   workspaceDir,
+			}},
+			Containers: []corev1.Container{nopContainer},
+			Volumes: implicitVolumes,
+		},
+	}, {
+		desc: "step-name-ends-with-non-alphanumeric",
+		b: v1alpha1.BuildSpec{
+			Steps: []corev1.Container{{
+				Name:  "ends-with-invalid-%%__$$",
+				Image: "image",
+			}},
+		},
+		bAnnotations: map[string]string{
+			"simple-annotation-key": "simple-annotation-val",
+		},
+		want: &corev1.PodSpec{
+			RestartPolicy: corev1.RestartPolicyNever,
+			InitContainers: []corev1.Container{{
+				Name:         initContainerPrefix + credsInit + "-9l9zj",
+				Image:        *credsImage,
+				Args:         []string{},
+				Env:          implicitEnvVars,
+				VolumeMounts: implicitVolumeMounts,
+				WorkingDir:   workspaceDir,
+			}, {
+				Name:         "build-step-ends-with-invalid",
 				Image:        "image",
 				Env:          implicitEnvVars,
 				VolumeMounts: implicitVolumeMounts,
