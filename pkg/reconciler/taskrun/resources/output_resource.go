@@ -17,8 +17,6 @@ limitations under the License.
 package resources
 
 import (
-	"path/filepath"
-
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/artifacts"
@@ -72,6 +70,15 @@ func AddOutputResources(
 		return nil, err
 	}
 
+	// track resources that are present in input of task cuz these resources will be copied onto PVC
+	inputResourceMap := map[string]string{}
+
+	if taskSpec.Inputs != nil {
+		for _, input := range taskSpec.Inputs.Resources {
+			inputResourceMap[input.Name] = destinationPath(input.Name, input.TargetPath)
+		}
+	}
+
 	for _, output := range taskSpec.Outputs.Resources {
 		boundResource, err := getBoundResource(output.Name, taskRun.Spec.Outputs.Resources)
 		if err != nil {
@@ -83,9 +90,12 @@ func AddOutputResources(
 			return nil, xerrors.Errorf("failed to get output pipeline Resource for task %q resource %v", taskName, boundResource)
 		}
 
+		// HACK to deal with source copying
 		var sourcePath string
 		if output.TargetPath == "" {
-			sourcePath = filepath.Join(outputDir, boundResource.Name)
+			// if resource is declared in input then copy outputs to pvc
+			// To build copy step it needs source path(which is targetpath of input resourcemap) from task input source
+			sourcePath = inputResourceMap[boundResource.Name]
 		} else {
 			sourcePath = output.TargetPath
 		}
