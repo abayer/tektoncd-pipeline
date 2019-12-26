@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"fmt"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"golang.org/x/xerrors"
 )
@@ -32,10 +33,12 @@ func ValidateParamTypesMatching(p *v1alpha1.PipelineSpec, pr *v1alpha1.PipelineR
 	// Build a list of parameter names from pr that have mismatching types with the map created above.
 	var wrongTypeParamNames []string
 	for _, param := range pr.Spec.Params {
-		if paramType, ok := paramTypes[param.Name]; ok {
-			if param.Value.Type != paramType {
-				wrongTypeParamNames = append(wrongTypeParamNames, param.Name)
-			}
+		paramType, ok := paramTypes[param.Name]
+		if !ok || paramType == "" {
+			paramType = v1alpha1.ParamTypeString
+		}
+		if param.Value.Type != paramType {
+			wrongTypeParamNames = append(wrongTypeParamNames, fmt.Sprintf("name: %s, pipeline type: %s, pr param: %+v", param.Name, paramType, param))
 		}
 	}
 

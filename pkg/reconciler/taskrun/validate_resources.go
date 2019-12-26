@@ -98,7 +98,11 @@ func validateParams(inputs *v1alpha1.Inputs, params []v1alpha1.Param) error {
 	// the user-specified type.
 	var wrongTypeParamNames []string
 	for _, param := range params {
-		if param.Value.Type != paramTypes[param.Name] {
+		paramType, ok := paramTypes[param.Name]
+		if !ok || paramType == "" {
+			paramType = v1alpha1.ParamTypeString
+		}
+		if param.Value.Type != paramType {
 			wrongTypeParamNames = append(wrongTypeParamNames, param.Name)
 		}
 	}
