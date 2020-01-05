@@ -113,6 +113,8 @@ type Inputs struct {
 // an input Resource named `workspace` will be mounted at `/workspace`).
 type TaskResource struct {
 	ResourceDeclaration `json:",inline"`
+	// +optional
+	OutputImageDir string `json:"outputImageDir,omitempty"`
 }
 
 // Outputs allow a task to declare what data the Build/Task will be producing,
