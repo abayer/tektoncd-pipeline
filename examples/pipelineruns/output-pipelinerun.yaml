@@ -98,7 +98,7 @@ metadata:
 spec:
   pipelineRef:
     name: output-pipeline
-  serviceAccountName: 'default'
+  serviceAccount: 'default'
   resources:
   - name: source-repo
     resourceRef:

@@ -924,7 +924,7 @@ func TestReconcile(t *testing.T) {
 			defer cancel()
 			c := testAssets.Controller
 			clients := testAssets.Clients
-			saName := tc.taskRun.Spec.ServiceAccountName
+			saName := tc.taskRun.GetServiceAccountName()
 			if saName == "" {
 				saName = "default"
 			}

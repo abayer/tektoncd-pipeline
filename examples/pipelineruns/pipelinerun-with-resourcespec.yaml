@@ -86,7 +86,7 @@ metadata:
 spec:
   pipelineRef:
     name: pipeline-to-list-files
-  serviceAccountName: 'default'
+  serviceAccount: 'default'
   resources:
     - name: pipeline-git
       resourceSpec:
