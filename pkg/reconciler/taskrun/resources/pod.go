@@ -50,6 +50,9 @@ const (
 	taskRunLabelKey     = pipeline.GroupName + pipeline.TaskRunLabelKey
 	ManagedByLabelKey   = "app.kubernetes.io/managed-by"
 	ManagedByLabelValue = "tekton-pipelines"
+
+	gitHubAppAnnotationKey = "tekton.dev/githubapp-owner"
+	ownerLabelKey          = "owner"
 )
 
 // These are effectively const, but Go doesn't have such an annotation.
@@ -101,7 +104,7 @@ const (
 	readyAnnotationValue = "READY"
 )
 
-func makeCredentialInitializer(credsImage, serviceAccountName, namespace string, kubeclient kubernetes.Interface) (*v1alpha1.Step, []corev1.Volume, error) {
+func makeCredentialInitializer(credsImage, serviceAccountName, namespace, owner string, kubeclient kubernetes.Interface) (*v1alpha1.Step, []corev1.Volume, error) {
 	if serviceAccountName == "" {
 		serviceAccountName = "default"
 	}
@@ -121,6 +124,11 @@ func makeCredentialInitializer(credsImage, serviceAccountName, namespace string,
 		secret, err := kubeclient.CoreV1().Secrets(namespace).Get(secretEntry.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, nil, err
+		}
+
+		// if there's a github app annotation on the secret let's match that to the github org this pipeline is for
+		if owner != "" && secret.Annotations[gitHubAppAnnotationKey] != "" && secret.Annotations[gitHubAppAnnotationKey] != owner {
+			continue
 		}
 
 		matched := false
@@ -244,7 +252,7 @@ func TryGetPod(taskRunStatus v1alpha1.TaskRunStatus, gp GetPod) (*corev1.Pod, er
 // MakePod converts TaskRun and TaskSpec objects to a Pod which implements the taskrun specified
 // by the supplied CRD.
 func MakePod(images pipeline.Images, taskRun *v1alpha1.TaskRun, taskSpec v1alpha1.TaskSpec, kubeclient kubernetes.Interface) (*corev1.Pod, error) {
-	cred, secrets, err := makeCredentialInitializer(images.CredsImage, taskRun.GetServiceAccountName(), taskRun.Namespace, kubeclient)
+	cred, secrets, err := makeCredentialInitializer(images.CredsImage, taskRun.GetServiceAccountName(), taskRun.Namespace, taskRun.Labels[ownerLabelKey], kubeclient)
 	if err != nil {
 		return nil, err
 	}
