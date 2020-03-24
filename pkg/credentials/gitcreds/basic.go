@@ -87,6 +87,18 @@ func (dc *basicGitConfig) Write() error {
 	}
 
 	gitCredentialsPath := filepath.Join(os.Getenv("HOME"), ".git-credentials")
+
+	// If /var/build-secrets/tekton-git-credentials/.git-credentials exists, symlink it to $HOME/.git-credentials and exit.
+	mountedGitCredsSecret := filepath.Join(credentials.VolumePath, "tekton-git-credentials", ".git-credentials")
+	fileInfo, err := os.Stat(mountedGitCredsSecret)
+	if err == nil && !fileInfo.IsDir() {
+		err = os.Symlink(mountedGitCredsSecret, gitCredentialsPath)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
 	var gitCredentials []string
 	for _, k := range dc.order {
 		v := dc.entries[k]
