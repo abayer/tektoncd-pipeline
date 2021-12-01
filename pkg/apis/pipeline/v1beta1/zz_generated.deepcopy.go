@@ -898,8 +898,8 @@ func (in *PipelineTask) DeepCopyInto(out *PipelineTask) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.WhenExpressions != nil {
-		in, out := &in.WhenExpressions, &out.WhenExpressions
+	if in.When != nil {
+		in, out := &in.When, &out.When
 		*out = make(WhenExpressions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
@@ -1828,8 +1828,8 @@ func (in *TaskRunStatusFields) DeepCopyInto(out *TaskRunStatusFields) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.TaskRunResults != nil {
-		in, out := &in.TaskRunResults, &out.TaskRunResults
+	if in.TaskResults != nil {
+		in, out := &in.TaskResults, &out.TaskResults
 		*out = make([]TaskRunResult, len(*in))
 		copy(*out, *in)
 	}
