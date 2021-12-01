@@ -135,7 +135,7 @@ func MakeTaskRunStatus(logger *zap.SugaredLogger, tr v1beta1.TaskRun, pod *corev
 
 	setTaskRunStatusBasedOnSidecarStatus(sidecarStatuses, trs)
 
-	trs.TaskRunResults = removeDuplicateResults(trs.TaskRunResults)
+	trs.TaskResults = removeDuplicateResults(trs.TaskResults)
 
 	return *trs, merr.ErrorOrNil()
 }
@@ -165,7 +165,7 @@ func setTaskRunStatusBasedOnStepStatus(logger *zap.SugaredLogger, stepStatuses [
 				}
 				taskResults, pipelineResourceResults, filteredResults := filterResultsAndResources(results)
 				if tr.IsSuccessful() {
-					trs.TaskRunResults = append(trs.TaskRunResults, taskResults...)
+					trs.TaskResults = append(trs.TaskResults, taskResults...)
 					trs.ResourcesResult = append(trs.ResourcesResult, pipelineResourceResults...)
 				}
 				msg, err = createMessageFromResults(filteredResults)
@@ -186,7 +186,7 @@ func setTaskRunStatusBasedOnStepStatus(logger *zap.SugaredLogger, stepStatuses [
 		trs.Steps = append(trs.Steps, v1beta1.StepState{
 			ContainerState: *s.State.DeepCopy(),
 			Name:           trimStepPrefix(s.Name),
-			ContainerName:  s.Name,
+			Container:      s.Name,
 			ImageID:        s.ImageID,
 		})
 	}
@@ -200,7 +200,7 @@ func setTaskRunStatusBasedOnSidecarStatus(sidecarStatuses []corev1.ContainerStat
 		trs.Sidecars = append(trs.Sidecars, v1beta1.SidecarState{
 			ContainerState: *s.State.DeepCopy(),
 			Name:           TrimSidecarPrefix(s.Name),
-			ContainerName:  s.Name,
+			Container:      s.Name,
 			ImageID:        s.ImageID,
 		})
 	}
@@ -222,7 +222,7 @@ func filterResultsAndResources(results []v1beta1.PipelineResourceResult) ([]v1be
 	var pipelineResourceResults []v1beta1.PipelineResourceResult
 	var filteredResults []v1beta1.PipelineResourceResult
 	for _, r := range results {
-		switch r.ResultType {
+		switch r.Type {
 		case v1beta1.TaskRunResultType:
 			taskRunResult := v1beta1.TaskRunResult{
 				Name:  r.Key,
@@ -353,7 +353,7 @@ func getFailureMessage(logger *zap.SugaredLogger, pod *corev1.Pod) string {
 			msg := status.State.Terminated.Message
 			r, _ := termination.ParseMessage(logger, msg)
 			for _, result := range r {
-				if result.ResultType == v1beta1.InternalTektonResultType && result.Key == "Reason" && result.Value == "TimeoutExceeded" {
+				if result.Type == v1beta1.InternalTektonResultType && result.Key == "Reason" && result.Value == "TimeoutExceeded" {
 					// Newline required at end to prevent yaml parser from breaking the log help text at 80 chars
 					return fmt.Sprintf("%q exited because the step exceeded the specified timeout limit; for logs run: kubectl -n %s logs %s -c %s\n",
 						status.Name,

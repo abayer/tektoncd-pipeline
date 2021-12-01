@@ -64,9 +64,11 @@ var AllResourceTypes = resource.AllResourceTypes
 type TaskResources struct {
 	// Inputs holds the mapping from the PipelineResources declared in
 	// DeclaredPipelineResources to the input PipelineResources required by the Task.
+	// +listType=atomic
 	Inputs []TaskResource `json:"inputs,omitempty"`
 	// Outputs holds the mapping from the PipelineResources declared in
 	// DeclaredPipelineResources to the input PipelineResources required by the Task.
+	// +listType=atomic
 	Outputs []TaskResource `json:"outputs,omitempty"`
 }
 
@@ -82,8 +84,10 @@ type TaskResource struct {
 // TaskRunResources allows a TaskRun to declare inputs and outputs TaskResourceBinding
 type TaskRunResources struct {
 	// Inputs holds the inputs resources this task was invoked with
+	// +listType=atomic
 	Inputs []TaskResourceBinding `json:"inputs,omitempty"`
 	// Outputs holds the inputs resources this task was invoked with
+	// +listType=atomic
 	Outputs []TaskResourceBinding `json:"outputs,omitempty"`
 }
 
@@ -95,6 +99,7 @@ type TaskResourceBinding struct {
 	// The optional Path field corresponds to a path on disk at which the Resource can be found
 	// (used when providing the resource via mounted volume, overriding the default logic to fetch the Resource).
 	// +optional
+	// +listType=atomic
 	Paths []string `json:"paths,omitempty"`
 }
 
@@ -129,7 +134,7 @@ type PipelineResourceResult struct {
 	// The field ResourceRef should be deprecated and removed in the next API version.
 	// See https://github.com/tektoncd/pipeline/issues/2694 for more information.
 	ResourceRef *PipelineResourceRef `json:"resourceRef,omitempty"`
-	ResultType  ResultType           `json:"type,omitempty"`
+	Type        ResultType           `json:"type,omitempty"`
 }
 
 // ResultType used to find out whether a PipelineResourceResult is from a task result or not
@@ -208,10 +213,14 @@ type TaskModifier interface {
 }
 
 // InternalTaskModifier implements TaskModifier for resources that are built-in to Tekton Pipelines.
+// +k8s:openapi-gen=false
 type InternalTaskModifier struct {
+	// +listType=atomic
 	StepsToPrepend []Step
-	StepsToAppend  []Step
-	Volumes        []v1.Volume
+	// +listType=atomic
+	StepsToAppend []Step
+	// +listType=atomic
+	Volumes []v1.Volume
 }
 
 // GetStepsToPrepend returns a set of Steps to prepend to the Task.

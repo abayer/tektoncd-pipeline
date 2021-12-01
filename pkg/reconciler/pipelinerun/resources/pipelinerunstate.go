@@ -152,7 +152,7 @@ func (state PipelineRunState) GetTaskRunsStatus(pr *v1beta1.PipelineRun) map[str
 		if prtrs == nil {
 			prtrs = &v1beta1.PipelineRunTaskRunStatus{
 				PipelineTaskName: rprt.PipelineTask.Name,
-				WhenExpressions:  rprt.PipelineTask.WhenExpressions,
+				WhenExpressions:  rprt.PipelineTask.When,
 			}
 		}
 
@@ -209,7 +209,7 @@ func (state PipelineRunState) GetRunsStatus(pr *v1beta1.PipelineRun) map[string]
 		if prrs == nil {
 			prrs = &v1beta1.PipelineRunRunStatus{
 				PipelineTaskName: rprt.PipelineTask.Name,
-				WhenExpressions:  rprt.PipelineTask.WhenExpressions,
+				WhenExpressions:  rprt.PipelineTask.When,
 			}
 		}
 
@@ -431,7 +431,7 @@ func (facts *PipelineRunFacts) GetSkippedTasks() []v1beta1.SkippedTask {
 		if rprt.Skip(facts).IsSkipped {
 			skippedTask := v1beta1.SkippedTask{
 				Name:            rprt.PipelineTask.Name,
-				WhenExpressions: rprt.PipelineTask.WhenExpressions,
+				WhenExpressions: rprt.PipelineTask.When,
 			}
 			skipped = append(skipped, skippedTask)
 		}
@@ -442,7 +442,7 @@ func (facts *PipelineRunFacts) GetSkippedTasks() []v1beta1.SkippedTask {
 			// include the when expressions only when the finally task was skipped because
 			// its when expressions evaluated to false (not because results variables were missing)
 			if rprt.IsFinallySkipped(facts).SkippingReason == WhenExpressionsSkip {
-				skippedTask.WhenExpressions = rprt.PipelineTask.WhenExpressions
+				skippedTask.WhenExpressions = rprt.PipelineTask.When
 			}
 			skipped = append(skipped, skippedTask)
 		}

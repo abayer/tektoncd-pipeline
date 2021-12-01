@@ -292,7 +292,7 @@ func (t *ResolvedPipelineRunTask) skipBecauseConditionsFailed() bool {
 // it returns true if any of the when expressions evaluate to false
 func (t *ResolvedPipelineRunTask) skipBecauseWhenExpressionsEvaluatedToFalse(facts *PipelineRunFacts) bool {
 	if t.checkParentsDone(facts) {
-		if !t.PipelineTask.WhenExpressions.AllowsExecution() {
+		if !t.PipelineTask.When.AllowsExecution() {
 			return true
 		}
 	}
@@ -705,7 +705,7 @@ func (t *ResolvedPipelineRunTask) hasResultReferences() bool {
 			}
 		}
 	}
-	for _, we := range t.PipelineTask.WhenExpressions {
+	for _, we := range t.PipelineTask.When {
 		if ps, ok := we.GetVarSubstitutionExpressions(); ok {
 			if v1beta1.LooksLikeContainsResultRefs(ps) {
 				return true

@@ -41,7 +41,7 @@ var pipelineRunState = PipelineRunState{{
 				Conditions: duckv1beta1.Conditions{successCondition},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskRunResults: []v1beta1.TaskRunResult{{
+				TaskResults: []v1beta1.TaskRunResult{{
 					Name:  "aResult",
 					Value: "aResultValue",
 				}},
@@ -65,7 +65,7 @@ var pipelineRunState = PipelineRunState{{
 	PipelineTask: &v1beta1.PipelineTask{
 		Name:    "bTask",
 		TaskRef: &v1beta1.TaskRef{Name: "bTask"},
-		WhenExpressions: []v1beta1.WhenExpression{{
+		When: []v1beta1.WhenExpression{{
 			Input:    "$(tasks.aTask.results.aResult)",
 			Operator: selection.In,
 			Values:   []string{"$(tasks.aTask.results.aResult)"},
@@ -75,7 +75,7 @@ var pipelineRunState = PipelineRunState{{
 	PipelineTask: &v1beta1.PipelineTask{
 		Name:    "bTask",
 		TaskRef: &v1beta1.TaskRef{Name: "bTask"},
-		WhenExpressions: []v1beta1.WhenExpression{{
+		When: []v1beta1.WhenExpression{{
 			Input:    "$(tasks.aTask.results.missingResult)",
 			Operator: selection.In,
 			Values:   []string{"$(tasks.aTask.results.missingResult)"},
@@ -157,7 +157,7 @@ func TestTaskParamResolver_ResolveResultRefs(t *testing.T) {
 						Conditions: duckv1beta1.Conditions{successCondition},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskRunResults: []v1beta1.TaskRunResult{{
+						TaskResults: []v1beta1.TaskRunResult{{
 							Name:  "aResult",
 							Value: "aResultValue",
 						}},
@@ -193,7 +193,7 @@ func TestTaskParamResolver_ResolveResultRefs(t *testing.T) {
 						Conditions: duckv1beta1.Conditions{successCondition},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskRunResults: []v1beta1.TaskRunResult{{
+						TaskResults: []v1beta1.TaskRunResult{{
 							Name:  "aResult",
 							Value: "aResultValue",
 						}},
@@ -213,7 +213,7 @@ func TestTaskParamResolver_ResolveResultRefs(t *testing.T) {
 						Conditions: duckv1beta1.Conditions{successCondition},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskRunResults: []v1beta1.TaskRunResult{{
+						TaskResults: []v1beta1.TaskRunResult{{
 							Name:  "bResult",
 							Value: "bResultValue",
 						}},
@@ -256,7 +256,7 @@ func TestTaskParamResolver_ResolveResultRefs(t *testing.T) {
 						Conditions: duckv1beta1.Conditions{successCondition},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskRunResults: []v1beta1.TaskRunResult{{
+						TaskResults: []v1beta1.TaskRunResult{{
 							Name:  "aResult",
 							Value: "aResultValue",
 						}},

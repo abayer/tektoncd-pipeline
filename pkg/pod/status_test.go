@@ -75,8 +75,8 @@ func TestMakeTaskRunStatus(t *testing.T) {
 						Terminated: &corev1.ContainerStateTerminated{
 							ExitCode: 123,
 						}},
-					Name:          "state-name",
-					ContainerName: "step-state-name",
+					Name:      "state-name",
+					Container: "step-state-name",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 			},
@@ -109,9 +109,9 @@ func TestMakeTaskRunStatus(t *testing.T) {
 						Terminated: &corev1.ContainerStateTerminated{
 							ExitCode: 123,
 						}},
-					Name:          "state-name",
-					ContainerName: "step-state-name",
-					ImageID:       "image-id",
+					Name:      "state-name",
+					Container: "step-state-name",
+					ImageID:   "image-id",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 			},
@@ -138,9 +138,9 @@ func TestMakeTaskRunStatus(t *testing.T) {
 						Terminated: &corev1.ContainerStateTerminated{
 							ExitCode: 0,
 						}},
-					Name:          "step-push",
-					ContainerName: "step-step-push",
-					ImageID:       "image-id",
+					Name:      "step-push",
+					Container: "step-step-push",
+					ImageID:   "image-id",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				// We don't actually care about the time, just that it's not nil
@@ -165,8 +165,8 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					ContainerState: corev1.ContainerState{
 						Running: &corev1.ContainerStateRunning{},
 					},
-					Name:          "running-step",
-					ContainerName: "step-running-step",
+					Name:      "running-step",
+					Container: "step-running-step",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 			},
@@ -198,9 +198,9 @@ func TestMakeTaskRunStatus(t *testing.T) {
 							ExitCode: 123,
 						}},
 
-					Name:          "failure",
-					ContainerName: "step-failure",
-					ImageID:       "image-id",
+					Name:      "failure",
+					Container: "step-failure",
+					ImageID:   "image-id",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				// We don't actually care about the time, just that it's not nil
@@ -246,9 +246,9 @@ func TestMakeTaskRunStatus(t *testing.T) {
 							Reason:   "OOMKilled",
 							ExitCode: 0,
 						}},
-					Name:          "step-push",
-					ContainerName: "step-step-push",
-					ImageID:       "image-id",
+					Name:      "step-push",
+					Container: "step-step-push",
+					ImageID:   "image-id",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				// We don't actually care about the time, just that it's not nil
@@ -292,8 +292,8 @@ func TestMakeTaskRunStatus(t *testing.T) {
 							Message: "i'm pending",
 						},
 					},
-					Name:          "status-name",
-					ContainerName: "step-status-name",
+					Name:      "status-name",
+					Container: "step-status-name",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 			},
@@ -398,16 +398,16 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					ContainerState: corev1.ContainerState{
 						Running: &corev1.ContainerStateRunning{},
 					},
-					Name:          "running-step",
-					ContainerName: "step-running-step",
+					Name:      "running-step",
+					Container: "step-running-step",
 				}},
 				Sidecars: []v1beta1.SidecarState{{
 					ContainerState: corev1.ContainerState{
 						Running: &corev1.ContainerStateRunning{},
 					},
-					Name:          "running",
-					ImageID:       "image-id",
-					ContainerName: "sidecar-running",
+					Name:      "running",
+					ImageID:   "image-id",
+					Container: "sidecar-running",
 				}},
 			},
 		},
@@ -445,8 +445,8 @@ func TestMakeTaskRunStatus(t *testing.T) {
 							Message: "PodInitializing",
 						},
 					},
-					Name:          "waiting-step",
-					ContainerName: "step-waiting-step",
+					Name:      "waiting-step",
+					Container: "step-waiting-step",
 				}},
 				Sidecars: []v1beta1.SidecarState{{
 					ContainerState: corev1.ContainerState{
@@ -455,9 +455,9 @@ func TestMakeTaskRunStatus(t *testing.T) {
 							Message: "PodInitializing",
 						},
 					},
-					Name:          "waiting",
-					ImageID:       "image-id",
-					ContainerName: "sidecar-waiting",
+					Name:      "waiting",
+					ImageID:   "image-id",
+					Container: "sidecar-waiting",
 				}},
 			},
 		},
@@ -490,8 +490,8 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					ContainerState: corev1.ContainerState{
 						Running: &corev1.ContainerStateRunning{},
 					},
-					Name:          "running-step",
-					ContainerName: "step-running-step",
+					Name:      "running-step",
+					Container: "step-running-step",
 				}},
 				Sidecars: []v1beta1.SidecarState{{
 					ContainerState: corev1.ContainerState{
@@ -501,9 +501,9 @@ func TestMakeTaskRunStatus(t *testing.T) {
 							Message:  "Error",
 						},
 					},
-					Name:          "error",
-					ImageID:       "image-id",
-					ContainerName: "sidecar-error",
+					Name:      "error",
+					ImageID:   "image-id",
+					Container: "sidecar-error",
 				}},
 			},
 		},
@@ -528,8 +528,8 @@ func TestMakeTaskRunStatus(t *testing.T) {
 						Terminated: &corev1.ContainerStateTerminated{
 							Message: `[{"key":"digest","value":"sha256:12345","resourceRef":{"name":"source-image"}}]`,
 						}},
-					Name:          "foo",
-					ContainerName: "step-foo",
+					Name:      "foo",
+					Container: "step-foo",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				ResourcesResult: []v1beta1.PipelineResourceResult{{
@@ -562,8 +562,8 @@ func TestMakeTaskRunStatus(t *testing.T) {
 						Terminated: &corev1.ContainerStateTerminated{
 							Message: `[{"key":"digest","value":"sha256:1234","resourceRef":{"name":"source-image"}},{"key":"resultName","value":"resultValue","type":1}]`,
 						}},
-					Name:          "bar",
-					ContainerName: "step-bar",
+					Name:      "bar",
+					Container: "step-bar",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				ResourcesResult: []v1beta1.PipelineResourceResult{{
@@ -571,7 +571,7 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					Value:       "sha256:1234",
 					ResourceRef: &v1beta1.PipelineResourceRef{Name: "source-image"},
 				}},
-				TaskRunResults: []v1beta1.TaskRunResult{{
+				TaskResults: []v1beta1.TaskRunResult{{
 					Name:  "resultName",
 					Value: "resultValue",
 				}},
@@ -600,8 +600,8 @@ func TestMakeTaskRunStatus(t *testing.T) {
 						Terminated: &corev1.ContainerStateTerminated{
 							Message: `[{"key":"digest","value":"sha256:1234","resourceRef":{"name":"source-image"}},{"key":"resultName","value":"resultValue","type":1}]`,
 						}},
-					Name:          "banana",
-					ContainerName: "step-banana",
+					Name:      "banana",
+					Container: "step-banana",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				ResourcesResult: []v1beta1.PipelineResourceResult{{
@@ -609,7 +609,7 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					Value:       "sha256:1234",
 					ResourceRef: &v1beta1.PipelineResourceRef{Name: "source-image"},
 				}},
-				TaskRunResults: []v1beta1.TaskRunResult{{
+				TaskResults: []v1beta1.TaskRunResult{{
 					Name:  "resultName",
 					Value: "resultValue",
 				}},
@@ -645,18 +645,18 @@ func TestMakeTaskRunStatus(t *testing.T) {
 						Terminated: &corev1.ContainerStateTerminated{
 							Message: `[{"key":"resultNameOne","value":"resultValueOne","type":1},{"key":"resultNameTwo","value":"resultValueTwo","type":1}]`,
 						}},
-					Name:          "one",
-					ContainerName: "step-one",
+					Name:      "one",
+					Container: "step-one",
 				}, {
 					ContainerState: corev1.ContainerState{
 						Terminated: &corev1.ContainerStateTerminated{
 							Message: `[{"key":"resultNameOne","value":"resultValueThree","type":1},{"key":"resultNameTwo","value":"resultValueTwo","type":1}]`,
 						}},
-					Name:          "two",
-					ContainerName: "step-two",
+					Name:      "two",
+					Container: "step-two",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
-				TaskRunResults: []v1beta1.TaskRunResult{{
+				TaskResults: []v1beta1.TaskRunResult{{
 					Name:  "resultNameOne",
 					Value: "resultValueThree",
 				}, {
@@ -684,8 +684,8 @@ func TestMakeTaskRunStatus(t *testing.T) {
 				Steps: []v1beta1.StepState{{
 					ContainerState: corev1.ContainerState{
 						Terminated: &corev1.ContainerStateTerminated{}},
-					Name:          "mango",
-					ContainerName: "step-mango",
+					Name:      "mango",
+					Container: "step-mango",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				// We don't actually care about the time, just that it's not nil
@@ -711,8 +711,8 @@ func TestMakeTaskRunStatus(t *testing.T) {
 				Steps: []v1beta1.StepState{{
 					ContainerState: corev1.ContainerState{
 						Terminated: &corev1.ContainerStateTerminated{}},
-					Name:          "pineapple",
-					ContainerName: "step-pineapple",
+					Name:      "pineapple",
+					Container: "step-pineapple",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				// We don't actually care about the time, just that it's not nil
@@ -739,16 +739,16 @@ func TestMakeTaskRunStatus(t *testing.T) {
 						Terminated: &corev1.ContainerStateTerminated{
 							Message: `[{"key":"resultNameOne","value":"","type":2},{"key":"resultNameThree","value":"","type":1}]`,
 						}},
-					Name:          "pear",
-					ContainerName: "step-pear",
+					Name:      "pear",
+					Container: "step-pear",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				ResourcesResult: []v1beta1.PipelineResourceResult{{
-					Key:        "resultNameOne",
-					Value:      "",
-					ResultType: v1beta1.PipelineResourceResultType,
+					Key:   "resultNameOne",
+					Value: "",
+					Type:  v1beta1.PipelineResourceResultType,
 				}},
-				TaskRunResults: []v1beta1.TaskRunResult{{
+				TaskResults: []v1beta1.TaskRunResult{{
 					Name:  "resultNameThree",
 					Value: "",
 				}},
@@ -777,16 +777,16 @@ func TestMakeTaskRunStatus(t *testing.T) {
 						Terminated: &corev1.ContainerStateTerminated{
 							Message: `[{"key":"resultNameOne","value":"","type":2},{"key":"resultNameThree","value":"","type":1}]`,
 						}},
-					Name:          "pear",
-					ContainerName: "step-pear",
+					Name:      "pear",
+					Container: "step-pear",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				ResourcesResult: []v1beta1.PipelineResourceResult{{
-					Key:        "resultNameOne",
-					Value:      "",
-					ResultType: v1beta1.PipelineResourceResultType,
+					Key:   "resultNameOne",
+					Value: "",
+					Type:  v1beta1.PipelineResourceResultType,
 				}},
-				TaskRunResults: []v1beta1.TaskRunResult{{
+				TaskResults: []v1beta1.TaskRunResult{{
 					Name:  "resultNameThree",
 					Value: "",
 				}},
@@ -850,28 +850,28 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					ContainerState: corev1.ContainerState{
 						Terminated: &corev1.ContainerStateTerminated{},
 					},
-					Name:          "first",
-					ContainerName: "step-first",
+					Name:      "first",
+					Container: "step-first",
 				}, {
 					ContainerState: corev1.ContainerState{
 						Terminated: &corev1.ContainerStateTerminated{}},
-					Name:          "second",
-					ContainerName: "step-second",
+					Name:      "second",
+					Container: "step-second",
 				}, {
 					ContainerState: corev1.ContainerState{
 						Terminated: &corev1.ContainerStateTerminated{}},
-					Name:          "third",
-					ContainerName: "step-third",
+					Name:      "third",
+					Container: "step-third",
 				}, {
 					ContainerState: corev1.ContainerState{
 						Terminated: &corev1.ContainerStateTerminated{}},
-					Name:          "",
-					ContainerName: "step-",
+					Name:      "",
+					Container: "step-",
 				}, {
 					ContainerState: corev1.ContainerState{
 						Terminated: &corev1.ContainerStateTerminated{}},
-					Name:          "fourth",
-					ContainerName: "step-fourth",
+					Name:      "fourth",
+					Container: "step-fourth",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				// We don't actually care about the time, just that it's not nil
@@ -917,15 +917,15 @@ func TestMakeTaskRunStatus(t *testing.T) {
 							ExitCode: 11,
 						},
 					},
-					Name:          "first",
-					ContainerName: "step-first",
+					Name:      "first",
+					Container: "step-first",
 				}, {
 					ContainerState: corev1.ContainerState{
 						Terminated: &corev1.ContainerStateTerminated{
 							ExitCode: 0,
 						}},
-					Name:          "second",
-					ContainerName: "step-second",
+					Name:      "second",
+					Container: "step-second",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
 				// We don't actually care about the time, just that it's not nil
@@ -1045,27 +1045,27 @@ func TestMakeRunStatusJSONError(t *testing.T) {
 						ExitCode: 1,
 						Message:  "this is a non-json termination message. dont panic!",
 					}},
-				Name:          "non-json",
-				ContainerName: "step-non-json",
-				ImageID:       "image",
+				Name:      "non-json",
+				Container: "step-non-json",
+				ImageID:   "image",
 			}, {
 				ContainerState: corev1.ContainerState{
 					Terminated: &corev1.ContainerStateTerminated{}},
-				Name:          "after-non-json",
-				ContainerName: "step-after-non-json",
-				ImageID:       "image",
+				Name:      "after-non-json",
+				Container: "step-after-non-json",
+				ImageID:   "image",
 			}, {
 				ContainerState: corev1.ContainerState{
 					Terminated: &corev1.ContainerStateTerminated{}},
-				Name:          "this-step-might-panic",
-				ContainerName: "step-this-step-might-panic",
-				ImageID:       "image",
+				Name:      "this-step-might-panic",
+				Container: "step-this-step-might-panic",
+				ImageID:   "image",
 			}, {
 				ContainerState: corev1.ContainerState{
 					Terminated: &corev1.ContainerStateTerminated{}},
-				Name:          "foo",
-				ContainerName: "step-foo",
-				ImageID:       "image",
+				Name:      "foo",
+				Container: "step-foo",
+				ImageID:   "image",
 			}},
 			Sidecars: []v1beta1.SidecarState{},
 			// We don't actually care about the time, just that it's not nil

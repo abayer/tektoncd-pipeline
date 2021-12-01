@@ -2600,7 +2600,7 @@ func TestReconcileCloudEvents(t *testing.T) {
 						Target: cloudEventTarget2,
 						Status: v1beta1.CloudEventDeliveryState{
 							Condition: v1beta1.CloudEventConditionUnknown,
-							Error:     "fakemessage",
+							Message:   "fakemessage",
 						},
 					},
 				},
@@ -2716,7 +2716,7 @@ func TestReconcileCloudEvents(t *testing.T) {
 				Status: v1beta1.CloudEventDeliveryState{
 					Condition:  v1beta1.CloudEventConditionSent,
 					RetryCount: 1,
-					Error:      "fakemessage",
+					Message:    "fakemessage",
 				},
 			},
 		},
@@ -2771,9 +2771,9 @@ func TestReconcile_Single_SidecarState(t *testing.T) {
 		Status: v1beta1.TaskRunStatus{
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
 				Sidecars: []v1beta1.SidecarState{{
-					Name:          "sidecar",
-					ImageID:       "image-id",
-					ContainerName: "sidecar-sidecar",
+					Name:      "sidecar",
+					ImageID:   "image-id",
+					Container: "sidecar-sidecar",
 					ContainerState: corev1.ContainerState{
 						Running: &runningState,
 					},
@@ -2801,9 +2801,9 @@ func TestReconcile_Single_SidecarState(t *testing.T) {
 	}
 
 	expected := v1beta1.SidecarState{
-		Name:          "sidecar",
-		ImageID:       "image-id",
-		ContainerName: "sidecar-sidecar",
+		Name:      "sidecar",
+		ImageID:   "image-id",
+		Container: "sidecar-sidecar",
 		ContainerState: corev1.ContainerState{
 			Running: &runningState,
 		},
@@ -2828,17 +2828,17 @@ func TestReconcile_Multiple_SidecarStates(t *testing.T) {
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
 				Sidecars: []v1beta1.SidecarState{
 					{
-						Name:          "sidecar1",
-						ImageID:       "image-id",
-						ContainerName: "sidecar-sidecar1",
+						Name:      "sidecar1",
+						ImageID:   "image-id",
+						Container: "sidecar-sidecar1",
 						ContainerState: corev1.ContainerState{
 							Running: &runningState,
 						},
 					},
 					{
-						Name:          "sidecar2",
-						ImageID:       "image-id",
-						ContainerName: "sidecar-sidecar2",
+						Name:      "sidecar2",
+						ImageID:   "image-id",
+						Container: "sidecar-sidecar2",
 						ContainerState: corev1.ContainerState{
 							Waiting: &waitingState,
 						},
@@ -2868,17 +2868,17 @@ func TestReconcile_Multiple_SidecarStates(t *testing.T) {
 
 	expected := []v1beta1.SidecarState{
 		{
-			Name:          "sidecar1",
-			ImageID:       "image-id",
-			ContainerName: "sidecar-sidecar1",
+			Name:      "sidecar1",
+			ImageID:   "image-id",
+			Container: "sidecar-sidecar1",
 			ContainerState: corev1.ContainerState{
 				Running: &runningState,
 			},
 		},
 		{
-			Name:          "sidecar2",
-			ImageID:       "image-id",
-			ContainerName: "sidecar-sidecar2",
+			Name:      "sidecar2",
+			ImageID:   "image-id",
+			Container: "sidecar-sidecar2",
 			ContainerState: corev1.ContainerState{
 				Waiting: &waitingState,
 			},

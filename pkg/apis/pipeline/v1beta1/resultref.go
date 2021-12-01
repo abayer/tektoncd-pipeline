@@ -23,6 +23,7 @@ import (
 )
 
 // ResultRef is a type that represents a reference to a task run result
+// +k8s:openapi-gen=false
 type ResultRef struct {
 	PipelineTask string
 	Result       string
@@ -146,7 +147,7 @@ func PipelineTaskResultRefs(pt *PipelineTask) []*ResultRef {
 		refs = append(refs, NewResultRefs(expressions)...)
 	}
 
-	for _, whenExpression := range pt.WhenExpressions {
+	for _, whenExpression := range pt.When {
 		expressions, _ := whenExpression.GetVarSubstitutionExpressions()
 		refs = append(refs, NewResultRefs(expressions)...)
 	}

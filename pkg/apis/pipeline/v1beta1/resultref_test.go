@@ -568,7 +568,7 @@ func TestPipelineTaskResultRefs(t *testing.T) {
 		Params: []v1beta1.Param{{
 			Value: *v1beta1.NewArrayOrString("$(tasks.pt2.results.r2)"),
 		}},
-		WhenExpressions: []v1beta1.WhenExpression{{
+		When: []v1beta1.WhenExpression{{
 			Input:    "$(tasks.pt3.results.r3)",
 			Operator: selection.In,
 			Values: []string{

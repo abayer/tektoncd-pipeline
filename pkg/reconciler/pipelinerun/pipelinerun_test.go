@@ -4575,7 +4575,7 @@ func TestReconcileWithWhenExpressionsWithParameters(t *testing.T) {
 				{
 					Name:    "hello-world-1",
 					TaskRef: &v1beta1.TaskRef{Name: "hello-world-1"},
-					WhenExpressions: []v1beta1.WhenExpression{
+					When: []v1beta1.WhenExpression{
 						{
 							Input:    "foo",
 							Operator: selection.NotIn,
@@ -4591,7 +4591,7 @@ func TestReconcileWithWhenExpressionsWithParameters(t *testing.T) {
 				{
 					Name:    "hello-world-2",
 					TaskRef: &v1beta1.TaskRef{Name: "hello-world-2"},
-					WhenExpressions: []v1beta1.WhenExpression{{
+					When: []v1beta1.WhenExpression{{
 						Input:    "$(params.run)",
 						Operator: selection.NotIn,
 						Values:   []string{"yes"},
@@ -4718,7 +4718,7 @@ func TestReconcileWithWhenExpressionsWithTaskResults(t *testing.T) {
 				{
 					Name:    "b-task",
 					TaskRef: &v1beta1.TaskRef{Name: "b-task"},
-					WhenExpressions: []v1beta1.WhenExpression{
+					When: []v1beta1.WhenExpression{
 						{
 							Input:    "$(tasks.a-task.results.aResult)",
 							Operator: selection.In,
@@ -4734,7 +4734,7 @@ func TestReconcileWithWhenExpressionsWithTaskResults(t *testing.T) {
 				{
 					Name:    "c-task",
 					TaskRef: &v1beta1.TaskRef{Name: "c-task"},
-					WhenExpressions: []v1beta1.WhenExpression{{
+					When: []v1beta1.WhenExpression{{
 						Input:    "$(tasks.a-task.results.aResult)",
 						Operator: selection.In,
 						Values:   []string{"missing"},
@@ -4781,7 +4781,7 @@ func TestReconcileWithWhenExpressionsWithTaskResults(t *testing.T) {
 				},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskRunResults: []v1beta1.TaskRunResult{{
+				TaskResults: []v1beta1.TaskRunResult{{
 					Name:  "aResult",
 					Value: "aResultValue",
 				}},
@@ -4889,7 +4889,7 @@ func TestReconcileWithWhenExpressionsScopedToTask(t *testing.T) {
 				{
 					Name:    "a-task",
 					TaskRef: &v1beta1.TaskRef{Name: "a-task"},
-					WhenExpressions: []v1beta1.WhenExpression{{
+					When: []v1beta1.WhenExpression{{
 						Input:    "foo",
 						Operator: selection.In,
 						Values:   []string{"bar"},
@@ -4905,7 +4905,7 @@ func TestReconcileWithWhenExpressionsScopedToTask(t *testing.T) {
 				{
 					Name:    "c-task",
 					TaskRef: &v1beta1.TaskRef{Name: "c-task"},
-					WhenExpressions: []v1beta1.WhenExpression{{
+					When: []v1beta1.WhenExpression{{
 						Input:    "foo",
 						Operator: selection.In,
 						Values:   []string{"bar"},
@@ -4924,7 +4924,7 @@ func TestReconcileWithWhenExpressionsScopedToTask(t *testing.T) {
 				{
 					Name:    "e-task",
 					TaskRef: &v1beta1.TaskRef{Name: "e-task"},
-					WhenExpressions: []v1beta1.WhenExpression{{
+					When: []v1beta1.WhenExpression{{
 						Input:    "$(tasks.a-task.results.aResult)",
 						Operator: selection.In,
 						Values:   []string{"aResultValue"},
@@ -5094,7 +5094,7 @@ func TestReconcileWithWhenExpressionsScopedToTaskWitResultRefs(t *testing.T) {
 				{
 					Name:    "b-task",
 					TaskRef: &v1beta1.TaskRef{Name: "b-task"},
-					WhenExpressions: []v1beta1.WhenExpression{{
+					When: []v1beta1.WhenExpression{{
 						Input:    "$(tasks.a-task.results.aResult)",
 						Operator: selection.In,
 						Values:   []string{"notResultValue"},
@@ -5149,7 +5149,7 @@ func TestReconcileWithWhenExpressionsScopedToTaskWitResultRefs(t *testing.T) {
 				},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskRunResults: []v1beta1.TaskRunResult{{
+				TaskResults: []v1beta1.TaskRunResult{{
 					Name:  "aResult",
 					Value: "aResultValue",
 				}},
@@ -5738,7 +5738,7 @@ func TestReconcileWithTaskResults(t *testing.T) {
 				},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskRunResults: []v1beta1.TaskRunResult{{
+				TaskResults: []v1beta1.TaskRunResult{{
 					Name:  "aResult",
 					Value: "aResultValue",
 				}},
@@ -5934,7 +5934,7 @@ func TestReconcileWithPipelineResults(t *testing.T) {
 				},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskRunResults: []v1beta1.TaskRunResult{{
+				TaskResults: []v1beta1.TaskRunResult{{
 					Name:  "aResult",
 					Value: "aResultValue",
 				}},
@@ -7702,7 +7702,7 @@ func TestReconcileWithTaskResultsInFinalTasks(t *testing.T) {
 						StringVal: "param",
 					}},
 				},
-				WhenExpressions: v1beta1.WhenExpressions{{
+				When: v1beta1.WhenExpressions{{
 					Input:    "$(tasks.dag-task-1.results.aResult)",
 					Operator: selection.NotIn,
 					Values:   []string{"aResultValue"},
@@ -7718,7 +7718,7 @@ func TestReconcileWithTaskResultsInFinalTasks(t *testing.T) {
 						StringVal: "param",
 					}},
 				},
-				WhenExpressions: v1beta1.WhenExpressions{{
+				When: v1beta1.WhenExpressions{{
 					Input:    "$(tasks.dag-task-1.results.aResult)",
 					Operator: selection.In,
 					Values:   []string{"aResultValue"},
@@ -7734,7 +7734,7 @@ func TestReconcileWithTaskResultsInFinalTasks(t *testing.T) {
 						StringVal: "param",
 					}},
 				},
-				WhenExpressions: v1beta1.WhenExpressions{{
+				When: v1beta1.WhenExpressions{{
 					Input:    "$(tasks.dag-task-2.results.aResult)",
 					Operator: selection.NotIn,
 					Values:   []string{"aResultValue"},
@@ -7751,7 +7751,7 @@ func TestReconcileWithTaskResultsInFinalTasks(t *testing.T) {
 						StringVal: "$(tasks.dag-task-2.results.aResult)",
 					}},
 				},
-				WhenExpressions: v1beta1.WhenExpressions{{
+				When: v1beta1.WhenExpressions{{
 					Input:    "$(tasks.dag-task-1.results.aResult)",
 					Operator: selection.In,
 					Values:   []string{"aResultValue"},
@@ -7808,7 +7808,7 @@ func TestReconcileWithTaskResultsInFinalTasks(t *testing.T) {
 				}},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskRunResults: []v1beta1.TaskRunResult{{Name: "aResult", Value: "aResultValue"}},
+				TaskResults: []v1beta1.TaskRunResult{{Name: "aResult", Value: "aResultValue"}},
 			},
 		},
 	}, {

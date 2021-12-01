@@ -154,16 +154,16 @@ func TestPipelineResourceResult_UnmarshalJSON(t *testing.T) {
 	}{{
 		name: "type defined as string - TaskRunResult",
 		data: "{\"key\":\"resultName\",\"value\":\"resultValue\", \"type\": \"TaskRunResult\"}",
-		pr:   v1beta1.PipelineResourceResult{Key: "resultName", Value: "resultValue", ResultType: v1beta1.TaskRunResultType},
+		pr:   v1beta1.PipelineResourceResult{Key: "resultName", Value: "resultValue", Type: v1beta1.TaskRunResultType},
 	},
 		{
 			name: "type defined as string - InternalTektonResult",
 			data: "{\"key\":\"resultName\",\"value\":\"\", \"type\": \"InternalTektonResult\"}",
-			pr:   v1beta1.PipelineResourceResult{Key: "resultName", Value: "", ResultType: v1beta1.InternalTektonResultType},
+			pr:   v1beta1.PipelineResourceResult{Key: "resultName", Value: "", Type: v1beta1.InternalTektonResultType},
 		}, {
 			name: "type defined as int",
 			data: "{\"key\":\"resultName\",\"value\":\"\", \"type\": 1}",
-			pr:   v1beta1.PipelineResourceResult{Key: "resultName", Value: "", ResultType: v1beta1.TaskRunResultType},
+			pr:   v1beta1.PipelineResourceResult{Key: "resultName", Value: "", Type: v1beta1.TaskRunResultType},
 		}}
 
 	for _, tc := range testcases {

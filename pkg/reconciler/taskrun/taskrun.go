@@ -752,7 +752,7 @@ func updateStoppedSidecarStatus(ctx context.Context, pod *corev1.Pod, tr *v1beta
 			tr.Status.Sidecars = append(tr.Status.Sidecars, v1beta1.SidecarState{
 				ContainerState: *sidecarState.DeepCopy(),
 				Name:           podconvert.TrimSidecarPrefix(s.Name),
-				ContainerName:  s.Name,
+				Container:      s.Name,
 				ImageID:        s.ImageID,
 			})
 		}

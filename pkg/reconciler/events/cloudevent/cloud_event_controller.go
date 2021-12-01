@@ -105,7 +105,7 @@ func SendCloudEvents(tr *v1beta1.TaskRun, ceclient CEClient, logger *zap.Sugared
 		if !cloudevents.IsACK(result) {
 			merr = multierror.Append(merr, result)
 			eventStatus.Condition = v1beta1.CloudEventConditionFailed
-			eventStatus.Error = merr.Error()
+			eventStatus.Message = merr.Error()
 		} else {
 			logger.Infow("Event sent.", zap.String("target", cloudEventDelivery.Target))
 			eventStatus.Condition = v1beta1.CloudEventConditionSent

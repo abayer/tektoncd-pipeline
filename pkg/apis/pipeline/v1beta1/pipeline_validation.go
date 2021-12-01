@@ -162,7 +162,7 @@ func validatePipelineParameterVariables(tasks []PipelineTask, params []ParamSpec
 func validatePipelineParametersVariables(tasks []PipelineTask, prefix string, paramNames sets.String, arrayParamNames sets.String) (errs *apis.FieldError) {
 	for idx, task := range tasks {
 		errs = errs.Also(validatePipelineParametersVariablesInTaskParameters(task.Params, prefix, paramNames, arrayParamNames).ViaIndex(idx))
-		errs = errs.Also(task.WhenExpressions.validatePipelineParametersVariables(prefix, paramNames, arrayParamNames).ViaIndex(idx))
+		errs = errs.Also(task.When.validatePipelineParametersVariables(prefix, paramNames, arrayParamNames).ViaIndex(idx))
 	}
 	return errs
 }
@@ -313,7 +313,7 @@ func validateTaskResultReferenceInFinallyTasks(finalTasks []PipelineTask, ts set
 					"params", p.Name).ViaFieldIndex("finally", idx))
 			}
 		}
-		for i, we := range t.WhenExpressions {
+		for i, we := range t.When {
 			if expressions, ok := we.GetVarSubstitutionExpressions(); ok {
 				errs = errs.Also(validateResultsVariablesExpressionsInFinally(expressions, ts, fts, "").ViaFieldIndex(
 					"when", i).ViaFieldIndex("finally", idx))
@@ -359,16 +359,16 @@ func validateTasksInputFrom(tasks []PipelineTask) (errs *apis.FieldError) {
 func validateWhenExpressions(tasks []PipelineTask, finalTasks []PipelineTask) (errs *apis.FieldError) {
 	for i, t := range tasks {
 		errs = errs.Also(validateOneOfWhenExpressionsOrConditions(t).ViaFieldIndex("tasks", i))
-		errs = errs.Also(t.WhenExpressions.validate().ViaFieldIndex("tasks", i))
+		errs = errs.Also(t.When.validate().ViaFieldIndex("tasks", i))
 	}
 	for i, t := range finalTasks {
-		errs = errs.Also(t.WhenExpressions.validate().ViaFieldIndex("finally", i))
+		errs = errs.Also(t.When.validate().ViaFieldIndex("finally", i))
 	}
 	return errs
 }
 
 func validateOneOfWhenExpressionsOrConditions(t PipelineTask) *apis.FieldError {
-	if t.WhenExpressions != nil && t.Conditions != nil {
+	if t.When != nil && t.Conditions != nil {
 		return apis.ErrMultipleOneOf("when", "conditions")
 	}
 	return nil

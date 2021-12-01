@@ -173,7 +173,7 @@ func findRunResultForParam(run *v1alpha1.Run, reference *v1beta1.ResultRef) (str
 }
 
 func findTaskResultForParam(taskRun *v1beta1.TaskRun, reference *v1beta1.ResultRef) (string, error) {
-	results := taskRun.Status.TaskRunStatusFields.TaskRunResults
+	results := taskRun.Status.TaskRunStatusFields.TaskResults
 	for _, result := range results {
 		if result.Name == reference.Result {
 			return result.Value, nil
