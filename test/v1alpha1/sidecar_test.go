@@ -166,7 +166,7 @@ spec:
 			sidecarFromStatus := trCheckSidecarStatus.Status.Sidecars[0]
 
 			// Check if Sidecar ContainerName is present for SidecarStatus
-			if sidecarFromStatus.ContainerName != fmt.Sprintf("sidecar-%s", sidecarContainerName) {
+			if sidecarFromStatus.Container != fmt.Sprintf("sidecar-%s", sidecarContainerName) {
 				t.Errorf("Sidecar ContainerName should be: %s", sidecarContainerName)
 			}
 
