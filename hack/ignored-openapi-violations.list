@@ -1,0 +1,3 @@
+API rule violation: names_match,github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1,PipelineTask,WhenExpressions
+API rule violation: names_match,github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1,TaskRunStatusFields,TaskRunResults
+API rule violation: names_match,github.com/tektoncd/pipeline/pkg/apis/resource/v1alpha1,PipelineResourceSpec,SecretParams

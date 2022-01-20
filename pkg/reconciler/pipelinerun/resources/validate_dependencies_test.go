@@ -131,7 +131,7 @@ func TestValidatePipelineTaskResults_IncorrectTaskName(t *testing.T) {
 		state: PipelineRunState{{
 			PipelineTask: &v1beta1.PipelineTask{
 				Name: "pt1",
-				When: []v1beta1.WhenExpression{{
+				WhenExpressions: []v1beta1.WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 					Values: []string{
@@ -198,7 +198,7 @@ func TestValidatePipelineTaskResults_IncorrectResultName(t *testing.T) {
 		state: PipelineRunState{pt1, {
 			PipelineTask: &v1beta1.PipelineTask{
 				Name: "pt2",
-				When: []v1beta1.WhenExpression{{
+				WhenExpressions: []v1beta1.WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 					Values: []string{

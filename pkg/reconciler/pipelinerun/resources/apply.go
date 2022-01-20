@@ -108,7 +108,7 @@ func ApplyTaskResults(targets PipelineRunState, resolvedResultRefs ResolvedResul
 		if resolvedPipelineRunTask.PipelineTask != nil {
 			pipelineTask := resolvedPipelineRunTask.PipelineTask.DeepCopy()
 			pipelineTask.Params = replaceParamValues(pipelineTask.Params, stringReplacements, nil)
-			pipelineTask.When = pipelineTask.When.ReplaceWhenExpressionsVariables(stringReplacements, nil)
+			pipelineTask.WhenExpressions = pipelineTask.WhenExpressions.ReplaceWhenExpressionsVariables(stringReplacements, nil)
 			resolvedPipelineRunTask.PipelineTask = pipelineTask
 		}
 	}
@@ -120,7 +120,7 @@ func ApplyPipelineTaskStateContext(state PipelineRunState, replacements map[stri
 		if resolvedPipelineRunTask.PipelineTask != nil {
 			pipelineTask := resolvedPipelineRunTask.PipelineTask.DeepCopy()
 			pipelineTask.Params = replaceParamValues(pipelineTask.Params, replacements, nil)
-			pipelineTask.When = pipelineTask.When.ReplaceWhenExpressionsVariables(replacements, nil)
+			pipelineTask.WhenExpressions = pipelineTask.WhenExpressions.ReplaceWhenExpressionsVariables(replacements, nil)
 			resolvedPipelineRunTask.PipelineTask = pipelineTask
 		}
 	}
@@ -155,12 +155,12 @@ func ApplyReplacements(p *v1beta1.PipelineSpec, replacements map[string]string, 
 			c := p.Tasks[i].Conditions[j]
 			c.Params = replaceParamValues(c.Params, replacements, arrayReplacements)
 		}
-		p.Tasks[i].When = p.Tasks[i].When.ReplaceWhenExpressionsVariables(replacements, arrayReplacements)
+		p.Tasks[i].WhenExpressions = p.Tasks[i].WhenExpressions.ReplaceWhenExpressionsVariables(replacements, arrayReplacements)
 	}
 
 	for i := range p.Finally {
 		p.Finally[i].Params = replaceParamValues(p.Finally[i].Params, replacements, arrayReplacements)
-		p.Finally[i].When = p.Finally[i].When.ReplaceWhenExpressionsVariables(replacements, arrayReplacements)
+		p.Finally[i].WhenExpressions = p.Finally[i].WhenExpressions.ReplaceWhenExpressionsVariables(replacements, arrayReplacements)
 	}
 
 	return p
@@ -245,7 +245,7 @@ func taskResultValue(taskName string, resultName string, taskStatuses map[string
 		return nil
 	}
 
-	for _, trResult := range status.Status.TaskResults {
+	for _, trResult := range status.Status.TaskRunResults {
 		if trResult.Name == resultName {
 			return &trResult.Value
 		}

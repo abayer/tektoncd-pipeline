@@ -1515,6 +1515,352 @@ func TestReconcile_InvalidPipelineRunNames(t *testing.T) {
 	}
 }
 
+func TestUpdateTaskRunsState(t *testing.T) {
+	// TestUpdateTaskRunsState runs "getTaskRunsStatus" and verifies how it updates a PipelineRun status
+	// from a TaskRun associated to the PipelineRun
+	pr := &v1beta1.PipelineRun{
+		ObjectMeta: baseObjectMeta("test-pipeline-run", "foo"),
+		Spec: v1beta1.PipelineRunSpec{
+			PipelineRef: &v1beta1.PipelineRef{Name: "test-pipeline"},
+		},
+	}
+	pipelineTask := v1beta1.PipelineTask{
+		Name: "unit-test-1",
+		WhenExpressions: []v1beta1.WhenExpression{{
+			Input:    "foo",
+			Operator: selection.In,
+			Values:   []string{"foo", "bar"},
+		}},
+		TaskRef: &v1beta1.TaskRef{Name: "unit-test-task"},
+	}
+	task := &v1beta1.Task{
+		ObjectMeta: baseObjectMeta("unit-test-task", "foo"),
+		Spec: v1beta1.TaskSpec{
+			Resources: &v1beta1.TaskResources{
+				Inputs: []v1beta1.TaskResource{{
+					ResourceDeclaration: v1beta1.ResourceDeclaration{
+						Name: "workspace",
+						Type: resourcev1alpha1.PipelineResourceTypeGit,
+					},
+				}},
+			},
+		},
+	}
+	taskrun := &v1beta1.TaskRun{
+		ObjectMeta: baseObjectMeta("test-pipeline-run-success-unit-test-1", "foo"),
+		Spec: v1beta1.TaskRunSpec{
+			TaskRef:            &v1beta1.TaskRef{Name: "unit-test-task"},
+			ServiceAccountName: "test-sa",
+			Resources:          &v1beta1.TaskRunResources{},
+			Timeout:            &metav1.Duration{Duration: config.DefaultTimeoutMinutes * time.Minute},
+		},
+		Status: v1beta1.TaskRunStatus{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{
+					apis.Condition{
+						Type: apis.ConditionSucceeded,
+					},
+				},
+			},
+			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+				Steps: []v1beta1.StepState{{
+					ContainerState: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{ExitCode: int32(0)},
+					},
+				}},
+			},
+		},
+	}
+
+	expectedTaskRunsStatus := make(map[string]*v1beta1.PipelineRunTaskRunStatus)
+	expectedTaskRunsStatus["test-pipeline-run-success-unit-test-1"] = &v1beta1.PipelineRunTaskRunStatus{
+		PipelineTaskName: "unit-test-1",
+		Status: &v1beta1.TaskRunStatus{
+			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+				Steps: []v1beta1.StepState{{
+					ContainerState: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{ExitCode: 0},
+					},
+				}}},
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{Type: apis.ConditionSucceeded}},
+			},
+		},
+		WhenExpressions: []v1beta1.WhenExpression{{
+			Input:    "foo",
+			Operator: selection.In,
+			Values:   []string{"foo", "bar"},
+		}},
+	}
+	expectedPipelineRunStatus := v1beta1.PipelineRunStatus{
+		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+			TaskRuns: expectedTaskRunsStatus,
+		},
+	}
+
+	state := resources.PipelineRunState{{
+		PipelineTask: &pipelineTask,
+		TaskRunName:  "test-pipeline-run-success-unit-test-1",
+		TaskRun:      taskrun,
+		ResolvedTaskResources: &taskrunresources.ResolvedTaskResources{
+			TaskSpec: &task.Spec,
+		},
+	}}
+	pr.Status.InitializeConditions(testClock{})
+	status := state.GetTaskRunsStatus(pr)
+	if d := cmp.Diff(expectedPipelineRunStatus.TaskRuns, status); d != "" {
+		t.Fatalf("Expected PipelineRun status to match TaskRun(s) status, but got a mismatch: %s", diff.PrintWantGot(d))
+	}
+
+}
+
+func TestUpdateRunsState(t *testing.T) {
+	// TestUpdateRunsState runs "getRunsStatus" and verifies how it updates a PipelineRun status
+	// from a Run associated to the PipelineRun
+	pr := &v1beta1.PipelineRun{
+		ObjectMeta: baseObjectMeta("test-pipeline-run", "foo"),
+		Spec: v1beta1.PipelineRunSpec{
+			PipelineRef: &v1beta1.PipelineRef{Name: "test-pipeline"},
+		},
+	}
+	pipelineTask := v1beta1.PipelineTask{
+		Name: "unit-test-1",
+		WhenExpressions: []v1beta1.WhenExpression{{
+			Input:    "foo",
+			Operator: selection.In,
+			Values:   []string{"foo", "bar"},
+		}},
+		TaskRef: &v1beta1.TaskRef{
+			APIVersion: "example.dev/v0",
+			Kind:       "Example",
+			Name:       "unit-test-run",
+		},
+	}
+	run := v1alpha1.Run{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "example.dev/v0",
+			Kind:       "Example",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "unit-test-run",
+			Namespace: "foo",
+		},
+		Spec: v1alpha1.RunSpec{},
+		Status: v1alpha1.RunStatus{
+			Status: duckv1.Status{
+				Conditions: duckv1.Conditions{{
+					Type:   apis.ConditionSucceeded,
+					Status: corev1.ConditionTrue,
+				}},
+			},
+		},
+	}
+	expectedRunsStatus := make(map[string]*v1beta1.PipelineRunRunStatus)
+	expectedRunsStatus["test-pipeline-run-success-unit-test-1"] = &v1beta1.PipelineRunRunStatus{
+		PipelineTaskName: "unit-test-1",
+		Status: &v1alpha1.RunStatus{
+			Status: duckv1.Status{
+				Conditions: duckv1.Conditions{{
+					Type:   apis.ConditionSucceeded,
+					Status: corev1.ConditionTrue,
+				}},
+			},
+		},
+		WhenExpressions: []v1beta1.WhenExpression{{
+			Input:    "foo",
+			Operator: selection.In,
+			Values:   []string{"foo", "bar"},
+		}},
+	}
+	expectedPipelineRunStatus := v1beta1.PipelineRunStatus{
+		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+			Runs: expectedRunsStatus,
+		},
+	}
+
+	state := resources.PipelineRunState{{
+		PipelineTask: &pipelineTask,
+		CustomTask:   true,
+		RunName:      "test-pipeline-run-success-unit-test-1",
+		Run:          &run,
+	}}
+	pr.Status.InitializeConditions(testClock{})
+	status := state.GetRunsStatus(pr)
+	if d := cmp.Diff(expectedPipelineRunStatus.Runs, status); d != "" {
+		t.Fatalf("Expected PipelineRun status to match Run(s) status, but got a mismatch: %s", diff.PrintWantGot(d))
+	}
+
+}
+
+func TestUpdateTaskRunStateWithConditionChecks(t *testing.T) {
+	// TestUpdateTaskRunsState runs "getTaskRunsStatus" and verifies how it updates a PipelineRun status
+	// from several different TaskRun with Conditions associated to the PipelineRun
+	taskrunName := "task-run"
+	successConditionCheckName := "success-condition"
+	failingConditionCheckName := "fail-condition"
+
+	successCondition := &v1alpha1.Condition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cond-1",
+			Namespace: "foo",
+		},
+	}
+	failingCondition := &v1alpha1.Condition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cond-2",
+			Namespace: "foo",
+		},
+	}
+
+	pipelineTask := v1beta1.PipelineTask{
+		TaskRef: &v1beta1.TaskRef{Name: "unit-test-task"},
+		Conditions: []v1beta1.PipelineTaskCondition{{
+			ConditionRef: successCondition.Name,
+		}, {
+			ConditionRef: failingCondition.Name,
+		}},
+	}
+
+	successConditionCheck := conditionCheckFromTaskRun(&v1beta1.TaskRun{
+		ObjectMeta: baseObjectMeta(successConditionCheckName, "foo"),
+		Status: v1beta1.TaskRunStatus{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{
+					apis.Condition{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionTrue,
+					},
+				},
+			},
+			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+				Steps: []v1beta1.StepState{{
+					ContainerState: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{ExitCode: int32(0)},
+					},
+				}},
+			},
+		},
+	})
+	failingConditionCheck := conditionCheckFromTaskRun(&v1beta1.TaskRun{
+		ObjectMeta: baseObjectMeta(failingConditionCheckName, "foo"),
+		Status: v1beta1.TaskRunStatus{
+			Status: duckv1beta1.Status{
+				Conditions: duckv1beta1.Conditions{
+					apis.Condition{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionFalse,
+					},
+				},
+			},
+			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
+				Steps: []v1beta1.StepState{{
+					ContainerState: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{ExitCode: int32(127)},
+					},
+				}},
+			},
+		},
+	})
+
+	successrcc := resources.ResolvedConditionCheck{
+		ConditionRegisterName: successCondition.Name + "-0",
+		ConditionCheckName:    successConditionCheckName,
+		Condition:             successCondition,
+		ConditionCheck:        successConditionCheck,
+	}
+	failingrcc := resources.ResolvedConditionCheck{
+		ConditionRegisterName: failingCondition.Name + "-0",
+		ConditionCheckName:    failingConditionCheckName,
+		Condition:             failingCondition,
+		ConditionCheck:        failingConditionCheck,
+	}
+
+	successConditionCheckStatus := &v1beta1.PipelineRunConditionCheckStatus{
+		ConditionName: successrcc.ConditionRegisterName,
+		Status: &v1beta1.ConditionCheckStatus{
+			ConditionCheckStatusFields: v1beta1.ConditionCheckStatusFields{
+				Check: corev1.ContainerState{
+					Terminated: &corev1.ContainerStateTerminated{ExitCode: 0},
+				},
+			},
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{Type: apis.ConditionSucceeded, Status: corev1.ConditionTrue}},
+			},
+		},
+	}
+	failingConditionCheckStatus := &v1beta1.PipelineRunConditionCheckStatus{
+		ConditionName: failingrcc.ConditionRegisterName,
+		Status: &v1beta1.ConditionCheckStatus{
+			ConditionCheckStatusFields: v1beta1.ConditionCheckStatusFields{
+				Check: corev1.ContainerState{
+					Terminated: &corev1.ContainerStateTerminated{ExitCode: 127},
+				},
+			},
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{{Type: apis.ConditionSucceeded, Status: corev1.ConditionFalse}},
+			},
+		},
+	}
+
+	failedTaskRunStatus := v1beta1.TaskRunStatus{
+		Status: duckv1beta1.Status{
+			Conditions: []apis.Condition{{
+				Type:    apis.ConditionSucceeded,
+				Status:  corev1.ConditionFalse,
+				Reason:  resources.ReasonConditionCheckFailed,
+				Message: fmt.Sprintf("ConditionChecks failed for Task %s in PipelineRun %s", taskrunName, "test-pipeline-run"),
+			}},
+		},
+	}
+
+	tcs := []struct {
+		name           string
+		rcc            resources.TaskConditionCheckState
+		expectedStatus v1beta1.PipelineRunTaskRunStatus
+	}{{
+		name: "success-condition-checks",
+		rcc:  resources.TaskConditionCheckState{&successrcc},
+		expectedStatus: v1beta1.PipelineRunTaskRunStatus{
+			ConditionChecks: map[string]*v1beta1.PipelineRunConditionCheckStatus{
+				successrcc.ConditionCheck.Name: successConditionCheckStatus,
+			},
+		},
+	}, {
+		name: "failing-condition-checks",
+		rcc:  resources.TaskConditionCheckState{&failingrcc},
+		expectedStatus: v1beta1.PipelineRunTaskRunStatus{
+			Status: &failedTaskRunStatus,
+			ConditionChecks: map[string]*v1beta1.PipelineRunConditionCheckStatus{
+				failingrcc.ConditionCheck.Name: failingConditionCheckStatus,
+			},
+		},
+	}, {
+		name: "multiple-condition-checks",
+		rcc:  resources.TaskConditionCheckState{&successrcc, &failingrcc},
+		expectedStatus: v1beta1.PipelineRunTaskRunStatus{
+			Status: &failedTaskRunStatus,
+			ConditionChecks: map[string]*v1beta1.PipelineRunConditionCheckStatus{
+				successrcc.ConditionCheck.Name: successConditionCheckStatus,
+				failingrcc.ConditionCheck.Name: failingConditionCheckStatus,
+			},
+		},
+	}}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			testAssets, cancel := getPipelineRunController(t, test.Data{})
+			defer cancel()
+			c := testAssets.Controller
+
+			err := c.Reconciler.Reconcile(testAssets.Ctx, tc.pipelineRun)
+			// No reason to keep reconciling something that doesnt or can't exist
+			if err != nil {
+				t.Errorf("Did not expect to see error when reconciling invalid PipelineRun but saw %q", err)
+			}
+		})
+	}
+}
+
 func TestReconcileOnCompletedPipelineRun(t *testing.T) {
 	// TestReconcileOnCompletedPipelineRun runs "Reconcile" on a PipelineRun that already reached completion
 	// and that does not have the latest status from TaskRuns yet. It checks that the TaskRun status is updated
@@ -4575,7 +4921,7 @@ func TestReconcileWithWhenExpressionsWithParameters(t *testing.T) {
 				{
 					Name:    "hello-world-1",
 					TaskRef: &v1beta1.TaskRef{Name: "hello-world-1"},
-					When: []v1beta1.WhenExpression{
+					WhenExpressions: []v1beta1.WhenExpression{
 						{
 							Input:    "foo",
 							Operator: selection.NotIn,
@@ -4591,7 +4937,7 @@ func TestReconcileWithWhenExpressionsWithParameters(t *testing.T) {
 				{
 					Name:    "hello-world-2",
 					TaskRef: &v1beta1.TaskRef{Name: "hello-world-2"},
-					When: []v1beta1.WhenExpression{{
+					WhenExpressions: []v1beta1.WhenExpression{{
 						Input:    "$(params.run)",
 						Operator: selection.NotIn,
 						Values:   []string{"yes"},
@@ -4718,7 +5064,7 @@ func TestReconcileWithWhenExpressionsWithTaskResults(t *testing.T) {
 				{
 					Name:    "b-task",
 					TaskRef: &v1beta1.TaskRef{Name: "b-task"},
-					When: []v1beta1.WhenExpression{
+					WhenExpressions: []v1beta1.WhenExpression{
 						{
 							Input:    "$(tasks.a-task.results.aResult)",
 							Operator: selection.In,
@@ -4734,7 +5080,7 @@ func TestReconcileWithWhenExpressionsWithTaskResults(t *testing.T) {
 				{
 					Name:    "c-task",
 					TaskRef: &v1beta1.TaskRef{Name: "c-task"},
-					When: []v1beta1.WhenExpression{{
+					WhenExpressions: []v1beta1.WhenExpression{{
 						Input:    "$(tasks.a-task.results.aResult)",
 						Operator: selection.In,
 						Values:   []string{"missing"},
@@ -4781,7 +5127,7 @@ func TestReconcileWithWhenExpressionsWithTaskResults(t *testing.T) {
 				},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "aResult",
 					Value: "aResultValue",
 				}},
@@ -4889,7 +5235,7 @@ func TestReconcileWithWhenExpressionsScopedToTask(t *testing.T) {
 				{
 					Name:    "a-task",
 					TaskRef: &v1beta1.TaskRef{Name: "a-task"},
-					When: []v1beta1.WhenExpression{{
+					WhenExpressions: []v1beta1.WhenExpression{{
 						Input:    "foo",
 						Operator: selection.In,
 						Values:   []string{"bar"},
@@ -4905,7 +5251,7 @@ func TestReconcileWithWhenExpressionsScopedToTask(t *testing.T) {
 				{
 					Name:    "c-task",
 					TaskRef: &v1beta1.TaskRef{Name: "c-task"},
-					When: []v1beta1.WhenExpression{{
+					WhenExpressions: []v1beta1.WhenExpression{{
 						Input:    "foo",
 						Operator: selection.In,
 						Values:   []string{"bar"},
@@ -4924,7 +5270,7 @@ func TestReconcileWithWhenExpressionsScopedToTask(t *testing.T) {
 				{
 					Name:    "e-task",
 					TaskRef: &v1beta1.TaskRef{Name: "e-task"},
-					When: []v1beta1.WhenExpression{{
+					WhenExpressions: []v1beta1.WhenExpression{{
 						Input:    "$(tasks.a-task.results.aResult)",
 						Operator: selection.In,
 						Values:   []string{"aResultValue"},
@@ -5094,7 +5440,7 @@ func TestReconcileWithWhenExpressionsScopedToTaskWitResultRefs(t *testing.T) {
 				{
 					Name:    "b-task",
 					TaskRef: &v1beta1.TaskRef{Name: "b-task"},
-					When: []v1beta1.WhenExpression{{
+					WhenExpressions: []v1beta1.WhenExpression{{
 						Input:    "$(tasks.a-task.results.aResult)",
 						Operator: selection.In,
 						Values:   []string{"notResultValue"},
@@ -5149,7 +5495,7 @@ func TestReconcileWithWhenExpressionsScopedToTaskWitResultRefs(t *testing.T) {
 				},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "aResult",
 					Value: "aResultValue",
 				}},
@@ -5738,7 +6084,7 @@ func TestReconcileWithTaskResults(t *testing.T) {
 				},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "aResult",
 					Value: "aResultValue",
 				}},
@@ -5934,7 +6280,7 @@ func TestReconcileWithPipelineResults(t *testing.T) {
 				},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "aResult",
 					Value: "aResultValue",
 				}},
@@ -7702,7 +8048,7 @@ func TestReconcileWithTaskResultsInFinalTasks(t *testing.T) {
 						StringVal: "param",
 					}},
 				},
-				When: v1beta1.WhenExpressions{{
+				WhenExpressions: v1beta1.WhenExpressions{{
 					Input:    "$(tasks.dag-task-1.results.aResult)",
 					Operator: selection.NotIn,
 					Values:   []string{"aResultValue"},
@@ -7718,7 +8064,7 @@ func TestReconcileWithTaskResultsInFinalTasks(t *testing.T) {
 						StringVal: "param",
 					}},
 				},
-				When: v1beta1.WhenExpressions{{
+				WhenExpressions: v1beta1.WhenExpressions{{
 					Input:    "$(tasks.dag-task-1.results.aResult)",
 					Operator: selection.In,
 					Values:   []string{"aResultValue"},
@@ -7734,7 +8080,7 @@ func TestReconcileWithTaskResultsInFinalTasks(t *testing.T) {
 						StringVal: "param",
 					}},
 				},
-				When: v1beta1.WhenExpressions{{
+				WhenExpressions: v1beta1.WhenExpressions{{
 					Input:    "$(tasks.dag-task-2.results.aResult)",
 					Operator: selection.NotIn,
 					Values:   []string{"aResultValue"},
@@ -7751,7 +8097,7 @@ func TestReconcileWithTaskResultsInFinalTasks(t *testing.T) {
 						StringVal: "$(tasks.dag-task-2.results.aResult)",
 					}},
 				},
-				When: v1beta1.WhenExpressions{{
+				WhenExpressions: v1beta1.WhenExpressions{{
 					Input:    "$(tasks.dag-task-1.results.aResult)",
 					Operator: selection.In,
 					Values:   []string{"aResultValue"},
@@ -7808,7 +8154,7 @@ func TestReconcileWithTaskResultsInFinalTasks(t *testing.T) {
 				}},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskResults: []v1beta1.TaskRunResult{{Name: "aResult", Value: "aResultValue"}},
+				TaskRunResults: []v1beta1.TaskRunResult{{Name: "aResult", Value: "aResultValue"}},
 			},
 		},
 	}, {

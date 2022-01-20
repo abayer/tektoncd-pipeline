@@ -92,11 +92,11 @@ spec:
 		t.Fatalf("TaskRun was not found for the task \"task1\"")
 	}
 
-	if len(taskrunItem.Status.TaskResults) != 1 {
+	if len(taskrunItem.Status.TaskRunResults) != 1 {
 		t.Fatalf("task1 should have produced a result before failing the step")
 	}
 
-	for _, r := range taskrunItem.Status.TaskResults {
+	for _, r := range taskrunItem.Status.TaskRunResults {
 		if r.Name == "result1" && r.Value != "123" {
 			t.Fatalf("task1 should have initialized a result \"result1\" to \"123\"")
 		}

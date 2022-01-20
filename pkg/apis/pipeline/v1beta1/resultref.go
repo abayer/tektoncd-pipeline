@@ -147,7 +147,7 @@ func PipelineTaskResultRefs(pt *PipelineTask) []*ResultRef {
 		refs = append(refs, NewResultRefs(expressions)...)
 	}
 
-	for _, whenExpression := range pt.When {
+	for _, whenExpression := range pt.WhenExpressions {
 		expressions, _ := whenExpression.GetVarSubstitutionExpressions()
 		refs = append(refs, NewResultRefs(expressions)...)
 	}

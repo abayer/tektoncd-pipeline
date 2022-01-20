@@ -137,6 +137,11 @@ func schema_pkg_apis_pipeline_pod_Template(ref common.ReferenceCallback) common.
 						},
 					},
 					"tolerations": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "If specified, the pod's tolerations.",
 							Type:        []string{"array"},
@@ -165,6 +170,7 @@ func schema_pkg_apis_pipeline_pod_Template(ref common.ReferenceCallback) common.
 					"volumes": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
+								"x-kubernetes-list-type":       "atomic",
 								"x-kubernetes-patch-merge-key": "name",
 								"x-kubernetes-patch-strategy":  "merge,retainKeys",
 							},
@@ -231,6 +237,11 @@ func schema_pkg_apis_pipeline_pod_Template(ref common.ReferenceCallback) common.
 						},
 					},
 					"imagePullSecrets": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "ImagePullSecrets gives the name of the secret used by the pod to pull the image if specified",
 							Type:        []string{"array"},
@@ -245,6 +256,11 @@ func schema_pkg_apis_pipeline_pod_Template(ref common.ReferenceCallback) common.
 						},
 					},
 					"hostAliases": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts file if specified. This is only valid for non-hostNetwork pods.",
 							Type:        []string{"array"},
@@ -2077,7 +2093,7 @@ func schema_pkg_apis_pipeline_v1beta1_PipelineTask(ref common.ReferenceCallback)
 					},
 					"when": {
 						SchemaProps: spec.SchemaProps{
-							Description: "When is a list of when expressions that need to be true for the task to run",
+							Description: "WhenExpressions is a list of when expressions that need to be true for the task to run",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4261,7 +4277,7 @@ func schema_pkg_apis_pipeline_v1beta1_TaskRunStatus(ref common.ReferenceCallback
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "TaskResults are the list of results written out by the task's containers",
+							Description: "TaskRunResults are the list of results written out by the task's containers",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4417,7 +4433,7 @@ func schema_pkg_apis_pipeline_v1beta1_TaskRunStatusFields(ref common.ReferenceCa
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "TaskResults are the list of results written out by the task's containers",
+							Description: "TaskRunResults are the list of results written out by the task's containers",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5022,6 +5038,11 @@ func schema_pkg_apis_resource_v1alpha1_PipelineResourceSpec(ref common.Reference
 						},
 					},
 					"params": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -5035,6 +5056,11 @@ func schema_pkg_apis_resource_v1alpha1_PipelineResourceSpec(ref common.Reference
 						},
 					},
 					"secrets": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Secrets to fetch to populate some of resource fields",
 							Type:        []string{"array"},

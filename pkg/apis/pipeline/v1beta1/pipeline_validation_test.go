@@ -240,7 +240,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Tasks: []PipelineTask{{
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 					Values:   []string{"bar"},
@@ -261,7 +261,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Tasks: []PipelineTask{{
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "bar-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.Exists,
 					Values:   []string{"foo"},
@@ -283,7 +283,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Finally: []PipelineTask{{
 				Name:    "invalid-pipeline-task-finally",
 				TaskRef: &TaskRef{Name: "bar-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.Exists,
 					Values:   []string{"foo"},
@@ -301,7 +301,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Tasks: []PipelineTask{{
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "bar-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.Exists,
 					Values:   []string{"foo"},
@@ -310,7 +310,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Finally: []PipelineTask{{
 				Name:    "invalid-pipeline-task-finally",
 				TaskRef: &TaskRef{Name: "bar-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.Exists,
 					Values:   []string{"foo"},
@@ -328,7 +328,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Tasks: []PipelineTask{{
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 					Values:   []string{},
@@ -350,7 +350,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Finally: []PipelineTask{{
 				Name:    "invalid-pipeline-task-finally",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 					Values:   []string{},
@@ -368,7 +368,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Tasks: []PipelineTask{{
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 					Values:   []string{},
@@ -377,7 +377,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Finally: []PipelineTask{{
 				Name:    "invalid-pipeline-task-finally",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 					Values:   []string{},
@@ -395,7 +395,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Tasks: []PipelineTask{{
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:  "foo",
 					Values: []string{"foo"},
 				}},
@@ -416,7 +416,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Finally: []PipelineTask{{
 				Name:    "invalid-pipeline-task-finally",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:  "foo",
 					Values: []string{"foo"},
 				}},
@@ -433,7 +433,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Tasks: []PipelineTask{{
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:  "foo",
 					Values: []string{"foo"},
 				}},
@@ -441,7 +441,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Finally: []PipelineTask{{
 				Name:    "invalid-pipeline-task-finally",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:  "foo",
 					Values: []string{"foo"},
 				}},
@@ -458,7 +458,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Tasks: []PipelineTask{{
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 				}},
@@ -479,7 +479,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Finally: []PipelineTask{{
 				Name:    "invalid-pipeline-task-finally",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 				}},
@@ -496,7 +496,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Tasks: []PipelineTask{{
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 				}},
@@ -504,7 +504,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Finally: []PipelineTask{{
 				Name:    "invalid-pipeline-task-finally",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "foo",
 					Operator: selection.In,
 				}},
@@ -524,7 +524,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			}, {
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "$(tasks.a-task.resultTypo.bResult)",
 					Operator: selection.In,
 					Values:   []string{"bar"},
@@ -549,7 +549,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Finally: []PipelineTask{{
 				Name:    "invalid-pipeline-task-finally",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "$(tasks.a-task.resultTypo.bResult)",
 					Operator: selection.In,
 					Values:   []string{"bar"},
@@ -570,7 +570,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			}, {
 				Name:    "invalid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "$(tasks.a-task.resultTypo.bResult)",
 					Operator: selection.In,
 					Values:   []string{"bar"},
@@ -579,7 +579,7 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 			Finally: []PipelineTask{{
 				Name:    "invalid-pipeline-task-finally",
 				TaskRef: &TaskRef{Name: "foo-task"},
-				When: []WhenExpression{{
+				WhenExpressions: []WhenExpression{{
 					Input:    "$(tasks.a-task.resultTypo.bResult)",
 					Operator: selection.In,
 					Values:   []string{"bar"},
@@ -598,9 +598,9 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 				Name:    "valid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
 			}, {
-				Name:    "invalid-pipeline-task",
-				TaskRef: &TaskRef{Name: "foo-task"},
-				When:    []WhenExpression{{}},
+				Name:            "invalid-pipeline-task",
+				TaskRef:         &TaskRef{Name: "foo-task"},
+				WhenExpressions: []WhenExpression{{}},
 			}},
 		},
 		expectedError: apis.FieldError{
@@ -619,9 +619,9 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 				TaskRef: &TaskRef{Name: "foo-task"},
 			}},
 			Finally: []PipelineTask{{
-				Name:    "invalid-pipeline-task-finally",
-				TaskRef: &TaskRef{Name: "foo-task"},
-				When:    []WhenExpression{{}},
+				Name:            "invalid-pipeline-task-finally",
+				TaskRef:         &TaskRef{Name: "foo-task"},
+				WhenExpressions: []WhenExpression{{}},
 			}},
 		},
 		expectedError: apis.FieldError{
@@ -636,14 +636,14 @@ func TestPipelineSpec_Validate_Failure(t *testing.T) {
 				Name:    "valid-pipeline-task",
 				TaskRef: &TaskRef{Name: "foo-task"},
 			}, {
-				Name:    "invalid-pipeline-task",
-				TaskRef: &TaskRef{Name: "foo-task"},
-				When:    []WhenExpression{{}},
+				Name:            "invalid-pipeline-task",
+				TaskRef:         &TaskRef{Name: "foo-task"},
+				WhenExpressions: []WhenExpression{{}},
 			}},
 			Finally: []PipelineTask{{
-				Name:    "invalid-pipeline-task-finally",
-				TaskRef: &TaskRef{Name: "foo-task"},
-				When:    []WhenExpression{{}},
+				Name:            "invalid-pipeline-task-finally",
+				TaskRef:         &TaskRef{Name: "foo-task"},
+				WhenExpressions: []WhenExpression{{}},
 			}},
 		},
 		expectedError: apis.FieldError{
@@ -1252,7 +1252,7 @@ func TestValidatePipelineParameterVariables_Success(t *testing.T) {
 		tasks: []PipelineTask{{
 			Name:    "bar",
 			TaskRef: &TaskRef{Name: "bar-task"},
-			When: []WhenExpression{{
+			WhenExpressions: []WhenExpression{{
 				Input:    "$(params.baz)",
 				Operator: selection.In,
 				Values:   []string{"foo"},
@@ -1272,7 +1272,7 @@ func TestValidatePipelineParameterVariables_Success(t *testing.T) {
 		tasks: []PipelineTask{{
 			Name:    "bar",
 			TaskRef: &TaskRef{Name: "bar-task"},
-			When: []WhenExpression{{
+			WhenExpressions: []WhenExpression{{
 				Input:    "$(params.baz)",
 				Operator: selection.In,
 				Values:   []string{"$(params.foo[*])"},
@@ -1353,7 +1353,7 @@ func TestValidatePipelineParameterVariables_Failure(t *testing.T) {
 		tasks: []PipelineTask{{
 			Name:    "bar",
 			TaskRef: &TaskRef{Name: "bar-task"},
-			When: []WhenExpression{{
+			WhenExpressions: []WhenExpression{{
 				Input:    "$(params.baz)",
 				Operator: selection.In,
 				Values:   []string{"foo"},
@@ -1368,7 +1368,7 @@ func TestValidatePipelineParameterVariables_Failure(t *testing.T) {
 		tasks: []PipelineTask{{
 			Name:    "bar",
 			TaskRef: &TaskRef{Name: "bar-task"},
-			When: []WhenExpression{{
+			WhenExpressions: []WhenExpression{{
 				Input:    "bax",
 				Operator: selection.In,
 				Values:   []string{"$(params.foo-is-baz)"},
@@ -1386,7 +1386,7 @@ func TestValidatePipelineParameterVariables_Failure(t *testing.T) {
 		tasks: []PipelineTask{{
 			Name:    "bar",
 			TaskRef: &TaskRef{Name: "bar-task"},
-			When: []WhenExpression{{
+			WhenExpressions: []WhenExpression{{
 				Input:    "$(params.foo)",
 				Operator: selection.In,
 				Values:   []string{"foo"},
@@ -1404,7 +1404,7 @@ func TestValidatePipelineParameterVariables_Failure(t *testing.T) {
 		tasks: []PipelineTask{{
 			Name:    "bar",
 			TaskRef: &TaskRef{Name: "bar-task"},
-			When: []WhenExpression{{
+			WhenExpressions: []WhenExpression{{
 				Input:    "$(params.foo)[*]",
 				Operator: selection.In,
 				Values:   []string{"$(params.foo[*])"},
@@ -2220,7 +2220,7 @@ func TestValidateFinalTasks_Failure(t *testing.T) {
 		}, {
 			Name:    "final-task-2",
 			TaskRef: &TaskRef{Name: "final-task"},
-			When: WhenExpressions{{
+			WhenExpressions: WhenExpressions{{
 				Input:    "$(tasks.final-task-1.results.output)",
 				Operator: selection.In,
 				Values:   []string{"result"},
@@ -2423,7 +2423,7 @@ func TestPipelineTasksExecutionStatus(t *testing.T) {
 			}, {
 				Name: "tasks-status", Value: ArrayOrString{Type: ParamTypeString, StringVal: "$(tasks.status)"},
 			}},
-			When: WhenExpressions{{
+			WhenExpressions: WhenExpressions{{
 				Input:    "$(tasks.foo.status)",
 				Operator: selection.In,
 				Values:   []string{"Failure"},
@@ -2441,7 +2441,7 @@ func TestPipelineTasksExecutionStatus(t *testing.T) {
 			Params: []Param{{
 				Name: "foo-status", Value: ArrayOrString{Type: ParamTypeString, StringVal: "$(tasks.foo.results.status)"},
 			}},
-			When: WhenExpressions{WhenExpression{
+			WhenExpressions: WhenExpressions{WhenExpression{
 				Input:    "$(tasks.foo.results.status)",
 				Operator: selection.In,
 				Values:   []string{"Failure"},
@@ -2479,7 +2479,7 @@ func TestPipelineTasksExecutionStatus(t *testing.T) {
 			Params: []Param{{
 				Name: "bar-status", Value: ArrayOrString{Type: ParamTypeString, StringVal: "$(tasks.bar.status)"},
 			}},
-			When: WhenExpressions{WhenExpression{
+			WhenExpressions: WhenExpressions{WhenExpression{
 				Input:    "$(tasks.bar.status)",
 				Operator: selection.In,
 				Values:   []string{"foo"},
@@ -2559,7 +2559,7 @@ func TestPipelineTasksExecutionStatus(t *testing.T) {
 		finalTasks: []PipelineTask{{
 			Name:    "foo",
 			TaskRef: &TaskRef{Name: "foo-task"},
-			When: WhenExpressions{{
+			WhenExpressions: WhenExpressions{{
 				Input:    "$(tasks.notask.status)",
 				Operator: selection.In,
 				Values:   []string{"Success"},
@@ -2580,7 +2580,7 @@ func TestPipelineTasksExecutionStatus(t *testing.T) {
 		}, {
 			Name:    "foo",
 			TaskRef: &TaskRef{Name: "foo-task"},
-			When: WhenExpressions{{
+			WhenExpressions: WhenExpressions{{
 				Input:    "$(tasks.notask.status)",
 				Operator: selection.In,
 				Values:   []string{"Success"},

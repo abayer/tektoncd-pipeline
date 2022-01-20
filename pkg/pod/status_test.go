@@ -571,7 +571,7 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					Value:       "sha256:1234",
 					ResourceRef: &v1beta1.PipelineResourceRef{Name: "source-image"},
 				}},
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "resultName",
 					Value: "resultValue",
 				}},
@@ -609,7 +609,7 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					Value:       "sha256:1234",
 					ResourceRef: &v1beta1.PipelineResourceRef{Name: "source-image"},
 				}},
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "resultName",
 					Value: "resultValue",
 				}},
@@ -656,7 +656,7 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					Container: "step-two",
 				}},
 				Sidecars: []v1beta1.SidecarState{},
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "resultNameOne",
 					Value: "resultValueThree",
 				}, {
@@ -748,7 +748,7 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					Value: "",
 					Type:  v1beta1.PipelineResourceResultType,
 				}},
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "resultNameThree",
 					Value: "",
 				}},
@@ -786,7 +786,7 @@ func TestMakeTaskRunStatus(t *testing.T) {
 					Value: "",
 					Type:  v1beta1.PipelineResourceResultType,
 				}},
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "resultNameThree",
 					Value: "",
 				}},

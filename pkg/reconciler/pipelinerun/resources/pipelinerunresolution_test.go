@@ -91,7 +91,7 @@ var pts = []v1beta1.PipelineTask{{
 }, {
 	Name:    "mytask10",
 	TaskRef: &v1beta1.TaskRef{Name: "taskWithWhenExpressions"},
-	When: []v1beta1.WhenExpression{{
+	WhenExpressions: []v1beta1.WhenExpression{{
 		Input:    "foo",
 		Operator: selection.In,
 		Values:   []string{"foo", "bar"},
@@ -99,7 +99,7 @@ var pts = []v1beta1.PipelineTask{{
 }, {
 	Name:    "mytask11",
 	TaskRef: &v1beta1.TaskRef{Name: "taskWithWhenExpressions"},
-	When: []v1beta1.WhenExpression{{
+	WhenExpressions: []v1beta1.WhenExpression{{
 		Input:    "foo",
 		Operator: selection.NotIn,
 		Values:   []string{"foo", "bar"},
@@ -107,7 +107,7 @@ var pts = []v1beta1.PipelineTask{{
 }, {
 	Name:    "mytask12",
 	TaskRef: &v1beta1.TaskRef{Name: "taskWithWhenExpressions"},
-	When: []v1beta1.WhenExpression{{
+	WhenExpressions: []v1beta1.WhenExpression{{
 		Input:    "foo",
 		Operator: selection.In,
 		Values:   []string{"foo", "bar"},
@@ -1209,7 +1209,7 @@ func TestIsSkipped(t *testing.T) {
 			PipelineTask: &v1beta1.PipelineTask{
 				Name:    "mytask22",
 				TaskRef: &v1beta1.TaskRef{Name: "task"},
-				When: v1beta1.WhenExpressions{{
+				WhenExpressions: v1beta1.WhenExpressions{{
 					Input:    "$(tasks.mytask11.results.missingResult)",
 					Operator: selection.In,
 					Values:   []string{"expectedResult"},
@@ -3227,9 +3227,9 @@ func TestResolvePipeline_WhenExpressions(t *testing.T) {
 	}
 
 	pt := v1beta1.PipelineTask{
-		Name:    "mytask1",
-		TaskRef: &v1beta1.TaskRef{Name: "task"},
-		When:    []v1beta1.WhenExpression{ptwe1},
+		Name:            "mytask1",
+		TaskRef:         &v1beta1.TaskRef{Name: "task"},
+		WhenExpressions: []v1beta1.WhenExpression{ptwe1},
 	}
 
 	providedResources := map[string]*resourcev1alpha1.PipelineResource{}
@@ -3402,7 +3402,7 @@ func TestResolvedPipelineRunTask_IsFinallySkipped(t *testing.T) {
 				},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "commit",
 					Value: "SHA2",
 				}},
@@ -3439,7 +3439,7 @@ func TestResolvedPipelineRunTask_IsFinallySkipped(t *testing.T) {
 		PipelineTask: &v1beta1.PipelineTask{
 			Name:    "final-task-3",
 			TaskRef: &v1beta1.TaskRef{Name: "task"},
-			When: v1beta1.WhenExpressions{{
+			WhenExpressions: v1beta1.WhenExpressions{{
 				Input:    "foo",
 				Operator: selection.NotIn,
 				Values:   []string{"bar"},
@@ -3449,7 +3449,7 @@ func TestResolvedPipelineRunTask_IsFinallySkipped(t *testing.T) {
 		PipelineTask: &v1beta1.PipelineTask{
 			Name:    "final-task-4",
 			TaskRef: &v1beta1.TaskRef{Name: "task"},
-			When: v1beta1.WhenExpressions{{
+			WhenExpressions: v1beta1.WhenExpressions{{
 				Input:    "foo",
 				Operator: selection.In,
 				Values:   []string{"bar"},
@@ -3459,7 +3459,7 @@ func TestResolvedPipelineRunTask_IsFinallySkipped(t *testing.T) {
 		PipelineTask: &v1beta1.PipelineTask{
 			Name:    "final-task-5",
 			TaskRef: &v1beta1.TaskRef{Name: "task"},
-			When: v1beta1.WhenExpressions{{
+			WhenExpressions: v1beta1.WhenExpressions{{
 				Input:    "$(tasks.dag-task.results.commit)",
 				Operator: selection.In,
 				Values:   []string{"SHA2"},
@@ -3469,7 +3469,7 @@ func TestResolvedPipelineRunTask_IsFinallySkipped(t *testing.T) {
 		PipelineTask: &v1beta1.PipelineTask{
 			Name:    "final-task-6",
 			TaskRef: &v1beta1.TaskRef{Name: "task"},
-			When: v1beta1.WhenExpressions{{
+			WhenExpressions: v1beta1.WhenExpressions{{
 				Input:    "$(tasks.dag-task.results.missing)",
 				Operator: selection.In,
 				Values:   []string{"none"},
@@ -3535,7 +3535,7 @@ func TestResolvedPipelineRunTask_IsFinalTask(t *testing.T) {
 				},
 			},
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-				TaskResults: []v1beta1.TaskRunResult{{
+				TaskRunResults: []v1beta1.TaskRunResult{{
 					Name:  "commit",
 					Value: "SHA2",
 				}},

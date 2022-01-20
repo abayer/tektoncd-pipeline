@@ -178,9 +178,9 @@ type PipelineTask struct {
 	// +listType=atomic
 	Conditions []PipelineTaskCondition `json:"conditions,omitempty"`
 
-	// When is a list of when expressions that need to be true for the task to run
+	// WhenExpressions is a list of when expressions that need to be true for the task to run
 	// +optional
-	When WhenExpressions `json:"when,omitempty"`
+	WhenExpressions WhenExpressions `json:"when,omitempty"`
 
 	// Retries represents how many times this task should be retried in case of task failure: ConditionSucceeded set to False
 	// +optional

@@ -77,7 +77,7 @@ func TestApplyParameters(t *testing.T) {
 				{Name: "second-param", Type: v1beta1.ParamTypeString},
 			},
 			Tasks: []v1beta1.PipelineTask{{
-				When: []v1beta1.WhenExpression{{
+				WhenExpressions: []v1beta1.WhenExpression{{
 					Input:    "$(params.first-param)",
 					Operator: selection.In,
 					Values:   []string{"$(params.second-param)"},
@@ -91,7 +91,7 @@ func TestApplyParameters(t *testing.T) {
 				{Name: "second-param", Type: v1beta1.ParamTypeString},
 			},
 			Tasks: []v1beta1.PipelineTask{{
-				When: []v1beta1.WhenExpression{{
+				WhenExpressions: []v1beta1.WhenExpression{{
 					Input:    "default-value",
 					Operator: selection.In,
 					Values:   []string{"second-value"},
@@ -197,7 +197,7 @@ func TestApplyParameters(t *testing.T) {
 					{Name: "final-task-first-param", Value: *v1beta1.NewArrayOrString("$(params.first-param)")},
 					{Name: "final-task-second-param", Value: *v1beta1.NewArrayOrString("$(params.second-param)")},
 				},
-				When: v1beta1.WhenExpressions{{
+				WhenExpressions: v1beta1.WhenExpressions{{
 					Input:    "$(params.first-param)",
 					Operator: selection.In,
 					Values:   []string{"$(params.second-param)"},
@@ -215,7 +215,7 @@ func TestApplyParameters(t *testing.T) {
 					{Name: "final-task-first-param", Value: *v1beta1.NewArrayOrString("default-value")},
 					{Name: "final-task-second-param", Value: *v1beta1.NewArrayOrString("second-value")},
 				},
-				When: v1beta1.WhenExpressions{{
+				WhenExpressions: v1beta1.WhenExpressions{{
 					Input:    "default-value",
 					Operator: selection.In,
 					Values:   []string{"second-value"},
@@ -240,7 +240,7 @@ func TestApplyParameters(t *testing.T) {
 					{Name: "final-task-first-param", Value: *v1beta1.NewArrayOrString("$(params.first-param)")},
 					{Name: "final-task-second-param", Value: *v1beta1.NewArrayOrString("$(params.second-param)")},
 				},
-				When: v1beta1.WhenExpressions{{
+				WhenExpressions: v1beta1.WhenExpressions{{
 					Input:    "$(params.first-param)",
 					Operator: selection.In,
 					Values:   []string{"$(params.second-param)"},
@@ -264,7 +264,7 @@ func TestApplyParameters(t *testing.T) {
 					{Name: "final-task-first-param", Value: *v1beta1.NewArrayOrString("default-value")},
 					{Name: "final-task-second-param", Value: *v1beta1.NewArrayOrString("second-value")},
 				},
-				When: v1beta1.WhenExpressions{{
+				WhenExpressions: v1beta1.WhenExpressions{{
 					Input:    "default-value",
 					Operator: selection.In,
 					Values:   []string{"second-value"},
@@ -420,7 +420,7 @@ func TestApplyTaskResults_MinimalExpression(t *testing.T) {
 			PipelineTask: &v1beta1.PipelineTask{
 				Name:    "bTask",
 				TaskRef: &v1beta1.TaskRef{Name: "bTask"},
-				When: []v1beta1.WhenExpression{{
+				WhenExpressions: []v1beta1.WhenExpression{{
 					Input:    "$(tasks.aTask.results.aResult)",
 					Operator: selection.In,
 					Values:   []string{"$(tasks.aTask.results.aResult)"},
@@ -431,7 +431,7 @@ func TestApplyTaskResults_MinimalExpression(t *testing.T) {
 			PipelineTask: &v1beta1.PipelineTask{
 				Name:    "bTask",
 				TaskRef: &v1beta1.TaskRef{Name: "bTask"},
-				When: []v1beta1.WhenExpression{{
+				WhenExpressions: []v1beta1.WhenExpression{{
 					Input:    "aResultValue",
 					Operator: selection.In,
 					Values:   []string{"aResultValue"},
@@ -498,7 +498,7 @@ func TestApplyTaskResults_EmbeddedExpression(t *testing.T) {
 			PipelineTask: &v1beta1.PipelineTask{
 				Name:    "bTask",
 				TaskRef: &v1beta1.TaskRef{Name: "bTask"},
-				When: []v1beta1.WhenExpression{
+				WhenExpressions: []v1beta1.WhenExpression{
 					{
 						Input:    "Result value --> $(tasks.aTask.results.aResult)",
 						Operator: selection.In,
@@ -511,7 +511,7 @@ func TestApplyTaskResults_EmbeddedExpression(t *testing.T) {
 			PipelineTask: &v1beta1.PipelineTask{
 				Name:    "bTask",
 				TaskRef: &v1beta1.TaskRef{Name: "bTask"},
-				When: []v1beta1.WhenExpression{{
+				WhenExpressions: []v1beta1.WhenExpression{{
 					Input:    "Result value --> aResultValue",
 					Operator: selection.In,
 					Values:   []string{"Result value --> aResultValue"},
@@ -784,7 +784,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{{
+						TaskRunResults: []v1beta1.TaskRunResult{{
 							Name:  "foo",
 							Value: "bar",
 						}},
@@ -810,7 +810,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{{
+						TaskRunResults: []v1beta1.TaskRunResult{{
 							Name:  "foo",
 							Value: "bar",
 						}},
@@ -836,7 +836,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{},
+						TaskRunResults: []v1beta1.TaskRunResult{},
 					},
 				},
 			},
@@ -859,7 +859,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{{
+						TaskRunResults: []v1beta1.TaskRunResult{{
 							Name:  "foo",
 							Value: "bar",
 						}},
@@ -885,7 +885,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{{
+						TaskRunResults: []v1beta1.TaskRunResult{{
 							Name:  "definitely-not-foo",
 							Value: "bar",
 						}},
@@ -911,7 +911,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{{
+						TaskRunResults: []v1beta1.TaskRunResult{{
 							Name:  "foo",
 							Value: "bar",
 						}},
@@ -940,7 +940,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{{
+						TaskRunResults: []v1beta1.TaskRunResult{{
 							Name:  "foo",
 							Value: "do",
 						}},
@@ -957,7 +957,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{{
+						TaskRunResults: []v1beta1.TaskRunResult{{
 							Name:  "bar",
 							Value: "rae",
 						}},
@@ -989,7 +989,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{{
+						TaskRunResults: []v1beta1.TaskRunResult{{
 							Name:  "foo",
 							Value: "do",
 						}, {
@@ -1009,7 +1009,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{{
+						TaskRunResults: []v1beta1.TaskRunResult{{
 							Name:  "baz",
 							Value: "rae",
 						}},
@@ -1167,7 +1167,7 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 						}},
 					},
 					TaskRunStatusFields: v1beta1.TaskRunStatusFields{
-						TaskResults: []v1beta1.TaskRunResult{{
+						TaskRunResults: []v1beta1.TaskRunResult{{
 							Name:  "baz",
 							Value: "rae",
 						}},
@@ -1209,7 +1209,7 @@ func TestApplyTaskRunContext(t *testing.T) {
 				Name:  "task3",
 				Value: *v1beta1.NewArrayOrString("$(tasks.task3.status)"),
 			}},
-			When: v1beta1.WhenExpressions{{
+			WhenExpressions: v1beta1.WhenExpressions{{
 				Input:    "$(tasks.task1.status)",
 				Operator: selection.In,
 				Values:   []string{"$(tasks.task3.status)"},
@@ -1227,7 +1227,7 @@ func TestApplyTaskRunContext(t *testing.T) {
 				Name:  "task3",
 				Value: *v1beta1.NewArrayOrString("none"),
 			}},
-			When: v1beta1.WhenExpressions{{
+			WhenExpressions: v1beta1.WhenExpressions{{
 				Input:    "succeeded",
 				Operator: selection.In,
 				Values:   []string{"none"},

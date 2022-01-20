@@ -443,7 +443,7 @@ func TestPipelineTaskList_Deps(t *testing.T) {
 			Name: "task-1",
 		}, {
 			Name: "task-2",
-			When: WhenExpressions{{
+			WhenExpressions: WhenExpressions{{
 				Input:    "$(tasks.task-1.results.result)",
 				Operator: "in",
 				Values:   []string{"foo"},
@@ -478,7 +478,7 @@ func TestPipelineTaskList_Deps(t *testing.T) {
 		}, {
 			Name:     "task-5",
 			RunAfter: []string{"task-1"},
-			When: WhenExpressions{{
+			WhenExpressions: WhenExpressions{{
 				Input:    "$(tasks.task-4.results.result)",
 				Operator: "in",
 				Values:   []string{"foo"},
@@ -536,7 +536,7 @@ func TestPipelineTaskList_Deps(t *testing.T) {
 					StringVal: "$(tasks.task-4.results.result)",
 				}},
 			},
-			When: WhenExpressions{{
+			WhenExpressions: WhenExpressions{{
 				Input:    "$(tasks.task-3.results.result)",
 				Operator: "in",
 				Values:   []string{"foo"},

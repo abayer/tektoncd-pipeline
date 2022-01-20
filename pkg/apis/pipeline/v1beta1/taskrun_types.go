@@ -219,10 +219,10 @@ type TaskRunStatusFields struct {
 	// +listType=atomic
 	ResourcesResult []PipelineResourceResult `json:"resourcesResult,omitempty"`
 
-	// TaskResults are the list of results written out by the task's containers
+	// TaskRunResults are the list of results written out by the task's containers
 	// +optional
 	// +listType=atomic
-	TaskResults []TaskRunResult `json:"taskResults,omitempty"`
+	TaskRunResults []TaskRunResult `json:"taskResults,omitempty"`
 
 	// The list has one entry per sidecar in the manifest. Each entry is
 	// represents the imageid of the corresponding sidecar.

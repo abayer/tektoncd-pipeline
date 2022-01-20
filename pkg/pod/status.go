@@ -135,7 +135,7 @@ func MakeTaskRunStatus(logger *zap.SugaredLogger, tr v1beta1.TaskRun, pod *corev
 
 	setTaskRunStatusBasedOnSidecarStatus(sidecarStatuses, trs)
 
-	trs.TaskResults = removeDuplicateResults(trs.TaskResults)
+	trs.TaskRunResults = removeDuplicateResults(trs.TaskRunResults)
 
 	return *trs, merr.ErrorOrNil()
 }
@@ -165,7 +165,7 @@ func setTaskRunStatusBasedOnStepStatus(logger *zap.SugaredLogger, stepStatuses [
 				}
 				taskResults, pipelineResourceResults, filteredResults := filterResultsAndResources(results)
 				if tr.IsSuccessful() {
-					trs.TaskResults = append(trs.TaskResults, taskResults...)
+					trs.TaskRunResults = append(trs.TaskRunResults, taskResults...)
 					trs.ResourcesResult = append(trs.ResourcesResult, pipelineResourceResults...)
 				}
 				msg, err = createMessageFromResults(filteredResults)
