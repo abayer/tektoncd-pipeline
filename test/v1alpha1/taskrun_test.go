@@ -93,8 +93,8 @@ spec:
 				Reason:   "Completed",
 			},
 		},
-		Name:      "unnamed-0",
-		Container: "step-unnamed-0",
+		ContainerName: "unnamed-0",
+		Container:     "step-unnamed-0",
 	}, {
 		ContainerState: corev1.ContainerState{
 			Terminated: &corev1.ContainerStateTerminated{
@@ -102,8 +102,8 @@ spec:
 				Reason:   "Error",
 			},
 		},
-		Name:      "unnamed-1",
-		Container: "step-unnamed-1",
+		ContainerName: "unnamed-1",
+		Container:     "step-unnamed-1",
 	}, {
 		ContainerState: corev1.ContainerState{
 			Terminated: &corev1.ContainerStateTerminated{
@@ -111,8 +111,8 @@ spec:
 				Reason:   "Error",
 			},
 		},
-		Name:      "unnamed-2",
-		Container: "step-unnamed-2",
+		ContainerName: "unnamed-2",
+		Container:     "step-unnamed-2",
 	}}
 	ignoreTerminatedFields := cmpopts.IgnoreFields(corev1.ContainerStateTerminated{}, "StartedAt", "FinishedAt", "ContainerID")
 	ignoreStepFields := cmpopts.IgnoreFields(v1alpha1.StepState{}, "ImageID")
@@ -175,8 +175,8 @@ spec:
 				Reason:   "Completed",
 			},
 		},
-		Name:      "unnamed-0",
-		Container: "step-unnamed-0",
+		ContainerName: "unnamed-0",
+		Container:     "step-unnamed-0",
 	}}
 
 	ignoreTerminatedFields := cmpopts.IgnoreFields(corev1.ContainerStateTerminated{}, "StartedAt", "FinishedAt", "ContainerID")

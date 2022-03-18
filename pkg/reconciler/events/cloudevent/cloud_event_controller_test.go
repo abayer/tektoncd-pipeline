@@ -63,7 +63,7 @@ func TestCloudEventDeliveryFromTargets(t *testing.T) {
 				Status: v1beta1.CloudEventDeliveryState{
 					Condition:  v1beta1.CloudEventConditionUnknown,
 					SentAt:     nil,
-					Message:    "",
+					Error:      "",
 					RetryCount: 0,
 				},
 			},
@@ -72,7 +72,7 @@ func TestCloudEventDeliveryFromTargets(t *testing.T) {
 				Status: v1beta1.CloudEventDeliveryState{
 					Condition:  v1beta1.CloudEventConditionUnknown,
 					SentAt:     nil,
-					Message:    "",
+					Error:      "",
 					RetryCount: 0,
 				},
 			},
@@ -126,7 +126,7 @@ func TestSendCloudEvents(t *testing.T) {
 							Target: "http//notattemptedfailed",
 							Status: v1beta1.CloudEventDeliveryState{
 								Condition: v1beta1.CloudEventConditionFailed,
-								Message:   "somehow",
+								Error:     "somehow",
 							},
 						},
 						{
@@ -146,7 +146,7 @@ func TestSendCloudEvents(t *testing.T) {
 							Target: "http//attemptedfailed",
 							Status: v1beta1.CloudEventDeliveryState{
 								Condition:  v1beta1.CloudEventConditionFailed,
-								Message:    "iknewit",
+								Error:      "iknewit",
 								RetryCount: 1,
 							},
 						},
@@ -192,7 +192,7 @@ func TestSendCloudEvents(t *testing.T) {
 							Target: "http//notattemptedfailed",
 							Status: v1beta1.CloudEventDeliveryState{
 								Condition: v1beta1.CloudEventConditionFailed,
-								Message:   "somehow",
+								Error:     "somehow",
 							},
 						},
 						{
@@ -212,7 +212,7 @@ func TestSendCloudEvents(t *testing.T) {
 							Target: "http//attemptedfailed",
 							Status: v1beta1.CloudEventDeliveryState{
 								Condition:  v1beta1.CloudEventConditionFailed,
-								Message:    "iknewit",
+								Error:      "iknewit",
 								RetryCount: 1,
 							},
 						},

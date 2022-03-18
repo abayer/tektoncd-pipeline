@@ -387,7 +387,7 @@ func schema_pkg_apis_pipeline_v1beta1_CloudEventDeliveryState(ref common.Referen
 					},
 					"message": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Message is the text of error (if any)",
+							Description: "Error is the text of error (if any)",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -2158,6 +2158,11 @@ func schema_pkg_apis_pipeline_v1beta1_PipelineTask(ref common.ReferenceCallback)
 						},
 					},
 					"matrix": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Matrix declares parameters used to fan out this task.",
 							Type:        []string{"array"},
@@ -2514,6 +2519,11 @@ func schema_pkg_apis_pipeline_v1beta1_PipelineTaskRunSpec(ref common.ReferenceCa
 						},
 					},
 					"stepOverrides": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -2527,6 +2537,11 @@ func schema_pkg_apis_pipeline_v1beta1_PipelineTaskRunSpec(ref common.ReferenceCa
 						},
 					},
 					"sidecarOverrides": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -2590,24 +2605,21 @@ func schema_pkg_apis_pipeline_v1beta1_ResolverParam(ref common.ReferenceCallback
 				Description: "ResolverParam is a single parameter passed to a resolver.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"Name": {
+					"name": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Name is the name of the parameter that will be passed to the resolver.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"Value": {
+					"value": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Value is the string value of the parameter that will be passed to the resolver.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"Name", "Value"},
 			},
 		},
 	}
@@ -2628,6 +2640,11 @@ func schema_pkg_apis_pipeline_v1beta1_ResolverRef(ref common.ReferenceCallback) 
 						},
 					},
 					"resource": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Resource contains the parameters used to identify the referenced Tekton resource. Example entries might include \"repo\" or \"path\" but the set of params ultimately depends on the chosen resolver.",
 							Type:        []string{"array"},
@@ -3973,15 +3990,14 @@ func schema_pkg_apis_pipeline_v1beta1_TaskRunSidecarOverride(ref common.Referenc
 				Description: "TaskRunSidecarOverride is used to override the values of a Sidecar in the corresponding Task.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"Name": {
+					"name": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The name of the Sidecar to override.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"Resources": {
+					"resources": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The resource requirements to apply to the Sidecar.",
 							Default:     map[string]interface{}{},
@@ -3989,7 +4005,6 @@ func schema_pkg_apis_pipeline_v1beta1_TaskRunSidecarOverride(ref common.Referenc
 						},
 					},
 				},
-				Required: []string{"Name", "Resources"},
 			},
 		},
 		Dependencies: []string{
@@ -4089,6 +4104,11 @@ func schema_pkg_apis_pipeline_v1beta1_TaskRunSpec(ref common.ReferenceCallback) 
 						},
 					},
 					"stepOverrides": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Overrides to apply to Steps in this TaskRun. If a field is specified in both a Step and a StepOverride, the value from the StepOverride will be used. This field is only supported when the alpha feature gate is enabled.",
 							Type:        []string{"array"},
@@ -4103,6 +4123,11 @@ func schema_pkg_apis_pipeline_v1beta1_TaskRunSpec(ref common.ReferenceCallback) 
 						},
 					},
 					"sidecarOverrides": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Overrides to apply to Sidecars in this TaskRun. If a field is specified in both a Sidecar and a SidecarOverride, the value from the SidecarOverride will be used. This field is only supported when the alpha feature gate is enabled.",
 							Type:        []string{"array"},
@@ -4486,15 +4511,14 @@ func schema_pkg_apis_pipeline_v1beta1_TaskRunStepOverride(ref common.ReferenceCa
 				Description: "TaskRunStepOverride is used to override the values of a Step in the corresponding Task.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"Name": {
+					"name": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The name of the Step to override.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"Resources": {
+					"resources": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The resource requirements to apply to the Step.",
 							Default:     map[string]interface{}{},
@@ -4502,7 +4526,6 @@ func schema_pkg_apis_pipeline_v1beta1_TaskRunStepOverride(ref common.ReferenceCa
 						},
 					},
 				},
-				Required: []string{"Name", "Resources"},
 			},
 		},
 		Dependencies: []string{

@@ -204,6 +204,7 @@ type PipelineTask struct {
 
 	// Matrix declares parameters used to fan out this task.
 	// +optional
+	// +listType=atomic
 	Matrix []Param `json:"matrix,omitempty"`
 
 	// Workspaces maps workspaces from the pipeline spec to the workspaces

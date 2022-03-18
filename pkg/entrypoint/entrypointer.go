@@ -122,18 +122,18 @@ func (e Entrypointer) Go() error {
 				e.WritePostFile(e.PostFile, err)
 			}
 			output = append(output, v1beta1.PipelineResourceResult{
-				Key:   "StartedAt",
-				Value: time.Now().Format(timeFormat),
-				Type:  v1beta1.InternalTektonResultType,
+				Key:        "StartedAt",
+				Value:      time.Now().Format(timeFormat),
+				ResultType: v1beta1.InternalTektonResultType,
 			})
 			return err
 		}
 	}
 
 	output = append(output, v1beta1.PipelineResourceResult{
-		Key:   "StartedAt",
-		Value: time.Now().Format(timeFormat),
-		Type:  v1beta1.InternalTektonResultType,
+		Key:        "StartedAt",
+		Value:      time.Now().Format(timeFormat),
+		ResultType: v1beta1.InternalTektonResultType,
 	})
 
 	var err error
@@ -151,9 +151,9 @@ func (e Entrypointer) Go() error {
 		err = e.Runner.Run(ctx, e.Command...)
 		if err == context.DeadlineExceeded {
 			output = append(output, v1beta1.PipelineResourceResult{
-				Key:   "Reason",
-				Value: "TimeoutExceeded",
-				Type:  v1beta1.InternalTektonResultType,
+				Key:        "Reason",
+				Value:      "TimeoutExceeded",
+				ResultType: v1beta1.InternalTektonResultType,
 			})
 		}
 	}
@@ -166,9 +166,9 @@ func (e Entrypointer) Go() error {
 		// with continue on error and an ExitError, write non-zero exit code and a post file
 		exitCode := strconv.Itoa(ee.ExitCode())
 		output = append(output, v1beta1.PipelineResourceResult{
-			Key:   "ExitCode",
-			Value: exitCode,
-			Type:  v1beta1.InternalTektonResultType,
+			Key:        "ExitCode",
+			Value:      exitCode,
+			ResultType: v1beta1.InternalTektonResultType,
 		})
 		e.WritePostFile(e.PostFile, nil)
 		e.WriteExitCodeFile(e.StepMetadataDir, exitCode)
@@ -206,9 +206,9 @@ func (e Entrypointer) readResultsFromDisk() error {
 		}
 		// if the file doesn't exist, ignore it
 		output = append(output, v1beta1.PipelineResourceResult{
-			Key:   resultFile,
-			Value: string(fileContents),
-			Type:  v1beta1.TaskRunResultType,
+			Key:        resultFile,
+			Value:      string(fileContents),
+			ResultType: v1beta1.TaskRunResultType,
 		})
 	}
 	// push output to termination path

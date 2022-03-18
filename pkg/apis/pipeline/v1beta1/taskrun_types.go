@@ -68,12 +68,14 @@ type TaskRunSpec struct {
 	// the value from the StepOverride will be used.
 	// This field is only supported when the alpha feature gate is enabled.
 	// +optional
+	// +listType=atomic
 	StepOverrides []TaskRunStepOverride `json:"stepOverrides,omitempty"`
 	// Overrides to apply to Sidecars in this TaskRun.
 	// If a field is specified in both a Sidecar and a SidecarOverride,
 	// the value from the SidecarOverride will be used.
 	// This field is only supported when the alpha feature gate is enabled.
 	// +optional
+	// +listType=atomic
 	SidecarOverrides []TaskRunSidecarOverride `json:"sidecarOverrides,omitempty"`
 }
 
@@ -245,17 +247,17 @@ type TaskRunResult struct {
 // TaskRunStepOverride is used to override the values of a Step in the corresponding Task.
 type TaskRunStepOverride struct {
 	// The name of the Step to override.
-	Name string
+	Name string `json:"name,omitempty"`
 	// The resource requirements to apply to the Step.
-	Resources corev1.ResourceRequirements
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // TaskRunSidecarOverride is used to override the values of a Sidecar in the corresponding Task.
 type TaskRunSidecarOverride struct {
 	// The name of the Sidecar to override.
-	Name string
+	Name string `json:"name,omitempty"`
 	// The resource requirements to apply to the Sidecar.
-	Resources corev1.ResourceRequirements
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // GetGroupVersionKind implements kmeta.OwnerRefable.
@@ -302,7 +304,7 @@ func (trs *TaskRunStatus) SetCondition(newCond *apis.Condition) {
 // StepState reports the results of running a step in a Task.
 type StepState struct {
 	corev1.ContainerState `json:",inline"`
-	Name                  string `json:"name,omitempty"`
+	ContainerName         string `json:"name,omitempty"`
 	Container             string `json:"container,omitempty"`
 	ImageID               string `json:"imageID,omitempty"`
 }
@@ -310,7 +312,7 @@ type StepState struct {
 // SidecarState reports the results of running a sidecar in a Task.
 type SidecarState struct {
 	corev1.ContainerState `json:",inline"`
-	Name                  string `json:"name,omitempty"`
+	ContainerName         string `json:"name,omitempty"`
 	Container             string `json:"container,omitempty"`
 	ImageID               string `json:"imageID,omitempty"`
 }
@@ -344,8 +346,8 @@ type CloudEventDeliveryState struct {
 	// SentAt is the time at which the last attempt to send the event was made
 	// +optional
 	SentAt *metav1.Time `json:"sentAt,omitempty"`
-	// Message is the text of error (if any)
-	Message string `json:"message"`
+	// Error is the text of error (if any)
+	Error string `json:"message"`
 	// RetryCount is the number of attempts of sending the cloud event
 	RetryCount int32 `json:"retryCount"`
 }

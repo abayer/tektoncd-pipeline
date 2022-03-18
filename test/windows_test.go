@@ -87,7 +87,7 @@ spec:
 				Reason:   "Completed",
 			},
 		},
-		Name:          "unnamed-0",
+		ContainerName: "unnamed-0",
 		ContainerName: "step-unnamed-0",
 	}}
 	if d := cmp.Diff(expectedStepState, taskrun.Status.Steps, ignoreTerminatedFields, ignoreStepFields); d != "" {
@@ -150,7 +150,7 @@ spec:
 				Reason:   "Completed",
 			},
 		},
-		Name:          "unnamed-0",
+		ContainerName: "unnamed-0",
 		ContainerName: "step-unnamed-0",
 	}, {
 		ContainerState: corev1.ContainerState{
@@ -159,7 +159,7 @@ spec:
 				Reason:   "Error",
 			},
 		},
-		Name:          "unnamed-1",
+		ContainerName: "unnamed-1",
 		ContainerName: "step-unnamed-1",
 	}, {
 		ContainerState: corev1.ContainerState{
@@ -168,7 +168,7 @@ spec:
 				Reason:   "Error",
 			},
 		},
-		Name:          "unnamed-2",
+		ContainerName: "unnamed-2",
 		ContainerName: "step-unnamed-2",
 	}}
 	if d := cmp.Diff(expectedStepState, taskrun.Status.Steps, ignoreTerminatedFields, ignoreStepFields); d != "" {

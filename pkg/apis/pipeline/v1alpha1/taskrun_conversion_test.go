@@ -96,7 +96,7 @@ func TestTaskRunConversion(t *testing.T) {
 					StartTime:      &metav1.Time{Time: time.Now().Add(-4 * time.Minute)},
 					CompletionTime: &metav1.Time{Time: time.Now().Add(-1 * time.Minute)},
 					Steps: []StepState{{
-						Name: "s1",
+						ContainerName: "s1",
 					}},
 				},
 			},

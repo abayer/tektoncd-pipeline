@@ -160,7 +160,7 @@ func (rcc *ResolvedConditionCheck) NewConditionCheckStatus() *v1beta1.ConditionC
 	var checkStep corev1.ContainerState
 	trs := rcc.ConditionCheck.Status
 	for _, s := range trs.Steps {
-		if s.Name == rcc.Condition.Spec.Check.Name {
+		if s.ContainerName == rcc.Condition.Spec.Check.Name {
 			checkStep = s.ContainerState
 			break
 		}
