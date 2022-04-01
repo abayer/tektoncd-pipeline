@@ -7056,10 +7056,14 @@ func TestUpdatePipelineRunStatusFromInformer(t *testing.T) {
 	}
 }
 
-func TestUpdatePipelineRunStatusFromTaskRuns(t *testing.T) {
+type updateStatusTaskRunsData struct {
+	withConditionsTaskRuns map[string]*v1beta1.PipelineRunTaskRunStatus
+	recoveredTaskRuns      map[string]*v1beta1.PipelineRunTaskRunStatus
+	simpleTaskRuns         map[string]*v1beta1.PipelineRunTaskRunStatus
+}
 
-	prUID := types.UID("11111111-1111-1111-1111-111111111111")
-	otherPrUID := types.UID("22222222-2222-2222-2222-222222222222")
+func getUpdateStatusTaskRunsData() updateStatusTaskRunsData {
+	data := updateStatusTaskRunsData{}
 
 	// PipelineRunConditionCheckStatus recovered by updatePipelineRunStatusFromTaskRuns
 	// It does not include the status, which is then retrieved via the regular reconcile
@@ -7127,6 +7131,67 @@ func TestUpdatePipelineRunStatusFromTaskRuns(t *testing.T) {
 		},
 	}
 
+	data.withConditionsTaskRuns = map[string]*v1beta1.PipelineRunTaskRunStatus{
+		"pr-task-1-xxyyy": {
+			PipelineTaskName: "task-1",
+			Status:           &v1beta1.TaskRunStatus{},
+		},
+		"pr-task-2-xxyyy": {
+			PipelineTaskName: "task-2",
+			Status:           nil,
+			ConditionChecks:  prccs2Full,
+		},
+		"pr-task-3-xxyyy": {
+			PipelineTaskName: "task-3",
+			Status:           &v1beta1.TaskRunStatus{},
+			ConditionChecks:  prccs3Full,
+		},
+		"pr-task-4-xxyyy": {
+			PipelineTaskName: "task-4",
+			Status:           nil,
+			ConditionChecks:  prccs4Full,
+		},
+	}
+
+	data.recoveredTaskRuns = map[string]*v1beta1.PipelineRunTaskRunStatus{
+		"pr-task-1-xxyyy": {
+			PipelineTaskName: "task-1",
+			Status:           &v1beta1.TaskRunStatus{},
+		},
+		"orphaned-taskruns-pr-task-2-xxyyy": {
+			PipelineTaskName: "task-2",
+			Status:           nil,
+			ConditionChecks:  prccs2Recovered,
+		},
+		"pr-task-3-xxyyy": {
+			PipelineTaskName: "task-3",
+			Status:           &v1beta1.TaskRunStatus{},
+			ConditionChecks:  prccs3Recovered,
+		},
+		"orphaned-taskruns-pr-task-4-xxyyy": {
+			PipelineTaskName: "task-4",
+			Status:           nil,
+			ConditionChecks:  prccs4Recovered,
+		},
+	}
+
+	data.simpleTaskRuns = map[string]*v1beta1.PipelineRunTaskRunStatus{
+		"pr-task-1-xxyyy": {
+			PipelineTaskName: "task-1",
+			Status:           &v1beta1.TaskRunStatus{},
+		},
+	}
+
+	return data
+}
+
+func TestUpdatePipelineRunStatusFromTaskRuns(t *testing.T) {
+
+	prUID := types.UID("11111111-1111-1111-1111-111111111111")
+	otherPrUID := types.UID("22222222-2222-2222-2222-222222222222")
+
+	taskRunsPRStatusData := getUpdateStatusTaskRunsData()
+
 	prRunningStatus := duckv1beta1.Status{
 		Conditions: []apis.Condition{
 			{
@@ -7141,27 +7206,7 @@ func TestUpdatePipelineRunStatusFromTaskRuns(t *testing.T) {
 	prStatusWithCondition := v1beta1.PipelineRunStatus{
 		Status: prRunningStatus,
 		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
-			TaskRuns: map[string]*v1beta1.PipelineRunTaskRunStatus{
-				"pr-task-1-xxyyy": {
-					PipelineTaskName: "task-1",
-					Status:           &v1beta1.TaskRunStatus{},
-				},
-				"pr-task-2-xxyyy": {
-					PipelineTaskName: "task-2",
-					Status:           nil,
-					ConditionChecks:  prccs2Full,
-				},
-				"pr-task-3-xxyyy": {
-					PipelineTaskName: "task-3",
-					Status:           &v1beta1.TaskRunStatus{},
-					ConditionChecks:  prccs3Full,
-				},
-				"pr-task-4-xxyyy": {
-					PipelineTaskName: "task-4",
-					Status:           nil,
-					ConditionChecks:  prccs4Full,
-				},
-			},
+			TaskRuns: taskRunsPRStatusData.withConditionsTaskRuns,
 		},
 	}
 
@@ -7191,39 +7236,14 @@ func TestUpdatePipelineRunStatusFromTaskRuns(t *testing.T) {
 	prStatusRecovered := v1beta1.PipelineRunStatus{
 		Status: prRunningStatus,
 		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
-			TaskRuns: map[string]*v1beta1.PipelineRunTaskRunStatus{
-				"pr-task-1-xxyyy": {
-					PipelineTaskName: "task-1",
-					Status:           &v1beta1.TaskRunStatus{},
-				},
-				"orphaned-taskruns-pr-task-2-xxyyy": {
-					PipelineTaskName: "task-2",
-					Status:           nil,
-					ConditionChecks:  prccs2Recovered,
-				},
-				"pr-task-3-xxyyy": {
-					PipelineTaskName: "task-3",
-					Status:           &v1beta1.TaskRunStatus{},
-					ConditionChecks:  prccs3Recovered,
-				},
-				"orphaned-taskruns-pr-task-4-xxyyy": {
-					PipelineTaskName: "task-4",
-					Status:           nil,
-					ConditionChecks:  prccs4Recovered,
-				},
-			},
+			TaskRuns: taskRunsPRStatusData.recoveredTaskRuns,
 		},
 	}
 
 	prStatusRecoveredSimple := v1beta1.PipelineRunStatus{
 		Status: prRunningStatus,
 		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
-			TaskRuns: map[string]*v1beta1.PipelineRunTaskRunStatus{
-				"pr-task-1-xxyyy": {
-					PipelineTaskName: "task-1",
-					Status:           &v1beta1.TaskRunStatus{},
-				},
-			},
+			TaskRuns: taskRunsPRStatusData.simpleTaskRuns,
 		},
 	}
 
@@ -7369,53 +7389,368 @@ func TestUpdatePipelineRunStatusFromTaskRuns(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		for _, embeddedVal := range valuesForEmbeddedStatus {
-			t.Run(fmt.Sprintf("%s-with-%s-embedded-status", tc.prName, embeddedVal), func(t *testing.T) {
-				logger := logtesting.TestLogger(t)
+		t.Run(tc.prName, func(t *testing.T) {
+			logger := logtesting.TestLogger(t)
 
-				pr := &v1beta1.PipelineRun{
-					ObjectMeta: metav1.ObjectMeta{Name: tc.prName, UID: prUID},
-					Status:     prStatusForEmbeddedStatus(tc.prStatus, embeddedVal),
+			pr := &v1beta1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{Name: tc.prName, UID: prUID},
+				Status:     tc.prStatus,
+			}
+
+			updatePipelineRunStatusFromTaskRuns(logger, pr, tc.trs, nil)
+			actualPrStatus := pr.Status
+
+			expectedPRStatus := tc.expectedPrStatus
+
+			// The TaskRun keys for recovered taskruns will contain a new random key, appended to the
+			// base name that we expect. Replace the random part so we can diff the whole structure
+			actualTaskRuns := actualPrStatus.PipelineRunStatusFields.TaskRuns
+			if actualTaskRuns != nil {
+				fixedTaskRuns := make(map[string]*v1beta1.PipelineRunTaskRunStatus)
+				re := regexp.MustCompile(`^[a-z\-]*?-task-[0-9]`)
+				for k, v := range actualTaskRuns {
+					newK := re.FindString(k)
+					fixedTaskRuns[newK+"-xxyyy"] = v
 				}
+				actualPrStatus.PipelineRunStatusFields.TaskRuns = fixedTaskRuns
+			}
 
-				updatePipelineRunStatusFromTaskRuns(logger, pr, tc.trs, nil)
-				actualPrStatus := pr.Status
+			if d := cmp.Diff(expectedPRStatus, actualPrStatus); d != "" {
+				t.Errorf("expected the PipelineRun status to match %#v. Diff %s", expectedPRStatus, diff.PrintWantGot(d))
+			}
+		})
+	}
+}
 
-				expectedPRStatus := prStatusForEmbeddedStatus(tc.expectedPrStatus, embeddedVal)
+type updateStatusChildRefsData struct {
+	withConditions []v1beta1.ChildStatusReference
+	recovered      []v1beta1.ChildStatusReference
+	simple         []v1beta1.ChildStatusReference
+}
 
-				// The TaskRun keys for recovered taskruns will contain a new random key, appended to the
-				// base name that we expect. Replace the random part so we can diff the whole structure
-				actualTaskRuns := actualPrStatus.PipelineRunStatusFields.TaskRuns
-				if actualTaskRuns != nil {
-					fixedTaskRuns := make(map[string]*v1beta1.PipelineRunTaskRunStatus)
-					re := regexp.MustCompile(`^[a-z\-]*?-task-[0-9]`)
-					for k, v := range actualTaskRuns {
-						newK := re.FindString(k)
-						fixedTaskRuns[newK+"-xxyyy"] = v
-					}
-					actualPrStatus.PipelineRunStatusFields.TaskRuns = fixedTaskRuns
+func getUpdateStatusChildRefsData() updateStatusChildRefsData {
+	// PipelineRunChildConditionCheckStatus recovered by updatePipelineRunStatusFromChildRefs
+	// It does not include the status, which is then retrieved via the regular reconcile
+	prccs2Recovered := []*v1beta1.PipelineRunChildConditionCheckStatus{{
+		ConditionCheckName: "pr-task-2-running-condition-check-xxyyy",
+		PipelineRunConditionCheckStatus: v1beta1.PipelineRunConditionCheckStatus{
+			ConditionName: "running-condition-0",
+		},
+	}}
+	prccs3Recovered := []*v1beta1.PipelineRunChildConditionCheckStatus{{
+		ConditionCheckName: "pr-task-3-successful-condition-check-xxyyy",
+		PipelineRunConditionCheckStatus: v1beta1.PipelineRunConditionCheckStatus{
+			ConditionName: "successful-condition-0",
+		},
+	}}
+	prccs4Recovered := []*v1beta1.PipelineRunChildConditionCheckStatus{{
+		ConditionCheckName: "pr-task-4-failed-condition-check-xxyyy",
+		PipelineRunConditionCheckStatus: v1beta1.PipelineRunConditionCheckStatus{
+			ConditionName: "failed-condition-0",
+		},
+	}}
+
+	// PipelineRunChildConditionCheckStatus full is used to test the behaviour of updatePipelineRunStatusFromChildRefs
+	// when no orphan TaskRuns are found, to check we don't alter good ones
+	prccs2Full := []*v1beta1.PipelineRunChildConditionCheckStatus{{
+		ConditionCheckName: "pr-task-2-running-condition-check-xxyyy",
+		PipelineRunConditionCheckStatus: v1beta1.PipelineRunConditionCheckStatus{
+			ConditionName: "running-condition-0",
+			Status: &v1beta1.ConditionCheckStatus{
+				ConditionCheckStatusFields: v1beta1.ConditionCheckStatusFields{
+					Check: corev1.ContainerState{
+						Running: &corev1.ContainerStateRunning{},
+					},
+				},
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{Type: apis.ConditionSucceeded, Status: corev1.ConditionUnknown}},
+				},
+			},
+		},
+	}}
+	prccs3Full := []*v1beta1.PipelineRunChildConditionCheckStatus{{
+		ConditionCheckName: "pr-task-3-successful-condition-check-xxyyy",
+		PipelineRunConditionCheckStatus: v1beta1.PipelineRunConditionCheckStatus{
+			ConditionName: "successful-condition-0",
+			Status: &v1beta1.ConditionCheckStatus{
+				ConditionCheckStatusFields: v1beta1.ConditionCheckStatusFields{
+					Check: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{ExitCode: 0},
+					},
+				},
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{Type: apis.ConditionSucceeded, Status: corev1.ConditionTrue}},
+				},
+			},
+		},
+	}}
+	prccs4Full := []*v1beta1.PipelineRunChildConditionCheckStatus{{
+		ConditionCheckName: "pr-task-4-failed-condition-check-xxyyy",
+		PipelineRunConditionCheckStatus: v1beta1.PipelineRunConditionCheckStatus{
+			ConditionName: "failed-condition-0",
+			Status: &v1beta1.ConditionCheckStatus{
+				ConditionCheckStatusFields: v1beta1.ConditionCheckStatusFields{
+					Check: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{ExitCode: 127},
+					},
+				},
+				Status: duckv1beta1.Status{
+					Conditions: []apis.Condition{{Type: apis.ConditionSucceeded, Status: corev1.ConditionFalse}},
+				},
+			},
+		},
+	}}
+
+	return updateStatusChildRefsData{
+		withConditions: []v1beta1.ChildStatusReference{
+			childRefForPipelineTask("pr-task-1-xxyyy", "task-1", "TaskRun", "v1beta1", nil, nil),
+			childRefForPipelineTask("pr-task-2-xxyyy", "task-2", "TaskRun", "v1beta1", nil, prccs2Full),
+			childRefForPipelineTask("pr-task-3-xxyyy", "task-3", "TaskRun", "v1beta1", nil, prccs3Full),
+			childRefForPipelineTask("pr-task-4-xxyyy", "task-4", "TaskRun", "v1beta1", nil, prccs4Full),
+		},
+		recovered: []v1beta1.ChildStatusReference{
+			childRefForPipelineTask("pr-task-1-xxyyy", "task-1", "TaskRun", "v1beta1", nil, nil),
+			childRefForPipelineTask("orphaned-taskruns-pr-task-2-xxyyy", "task-2", "TaskRun", "v1beta1", nil, prccs2Recovered),
+			childRefForPipelineTask("pr-task-3-xxyyy", "task-3", "TaskRun", "v1beta1", nil, prccs3Recovered),
+			childRefForPipelineTask("orphaned-taskruns-pr-task-4-xxyyy", "task-4", "TaskRun", "v1beta1", nil, prccs4Recovered),
+		},
+		simple: []v1beta1.ChildStatusReference{
+			childRefForPipelineTask("pr-task-1-xxyyy", "task-1", "TaskRun", "v1beta1", nil, nil),
+		},
+	}
+}
+
+func TestUpdatePipelineRunStatusFromChildRefs(t *testing.T) {
+	prUID := types.UID("11111111-1111-1111-1111-111111111111")
+	otherPrUID := types.UID("22222222-2222-2222-2222-222222222222")
+
+	childRefsPRStatusData := getUpdateStatusChildRefsData()
+
+	prRunningStatus := duckv1beta1.Status{
+		Conditions: []apis.Condition{
+			{
+				Type:    "Succeeded",
+				Status:  "Unknown",
+				Reason:  "Running",
+				Message: "Not all Tasks in the Pipeline have finished executing",
+			},
+		},
+	}
+
+	prStatusWithCondition := v1beta1.PipelineRunStatus{
+		Status: prRunningStatus,
+		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+			ChildReferences: childRefsPRStatusData.withConditions,
+		},
+	}
+
+	prStatusWithEmptyChildRefs := v1beta1.PipelineRunStatus{
+		Status:                  prRunningStatus,
+		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{},
+	}
+
+	prStatusWithOrphans := v1beta1.PipelineRunStatus{
+		Status: duckv1beta1.Status{
+			Conditions: []apis.Condition{
+				{
+					Type:    "Succeeded",
+					Status:  "Unknown",
+					Reason:  "Running",
+					Message: "Not all Tasks in the Pipeline have finished executing",
+				},
+			},
+		},
+		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{},
+	}
+
+	prStatusRecovered := v1beta1.PipelineRunStatus{
+		Status: prRunningStatus,
+		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+			ChildReferences: childRefsPRStatusData.recovered,
+		},
+	}
+
+	prStatusRecoveredSimple := v1beta1.PipelineRunStatus{
+		Status: prRunningStatus,
+		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+			ChildReferences: childRefsPRStatusData.simple,
+		},
+	}
+
+	allTaskRuns := []*v1beta1.TaskRun{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pr-task-1-xxyyy",
+				Labels: map[string]string{
+					pipeline.PipelineTaskLabelKey: "task-1",
+				},
+				OwnerReferences: []metav1.OwnerReference{{UID: prUID}},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pr-task-2-running-condition-check-xxyyy",
+				Labels: map[string]string{
+					pipeline.PipelineTaskLabelKey: "task-2",
+					pipeline.ConditionCheckKey:    "pr-task-2-running-condition-check-xxyyy",
+					pipeline.ConditionNameKey:     "running-condition",
+				},
+				OwnerReferences: []metav1.OwnerReference{{UID: prUID}},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pr-task-3-xxyyy",
+				Labels: map[string]string{
+					pipeline.PipelineTaskLabelKey: "task-3",
+				},
+				OwnerReferences: []metav1.OwnerReference{{UID: prUID}},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pr-task-3-successful-condition-check-xxyyy",
+				Labels: map[string]string{
+					pipeline.PipelineTaskLabelKey: "task-3",
+					pipeline.ConditionCheckKey:    "pr-task-3-successful-condition-check-xxyyy",
+					pipeline.ConditionNameKey:     "successful-condition",
+				},
+				OwnerReferences: []metav1.OwnerReference{{UID: prUID}},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pr-task-4-failed-condition-check-xxyyy",
+				Labels: map[string]string{
+					pipeline.PipelineTaskLabelKey: "task-4",
+					pipeline.ConditionCheckKey:    "pr-task-4-failed-condition-check-xxyyy",
+					pipeline.ConditionNameKey:     "failed-condition",
+				},
+				OwnerReferences: []metav1.OwnerReference{{UID: prUID}},
+			},
+		},
+	}
+
+	taskRunsFromAnotherPR := []*v1beta1.TaskRun{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pr-task-1-xxyyy",
+				Labels: map[string]string{
+					pipeline.PipelineTaskLabelKey: "task-1",
+				},
+				OwnerReferences: []metav1.OwnerReference{{UID: otherPrUID}},
+			},
+		},
+	}
+
+	tcs := []struct {
+		prName           string
+		prStatus         v1beta1.PipelineRunStatus
+		trs              []*v1beta1.TaskRun
+		expectedPrStatus v1beta1.PipelineRunStatus
+	}{
+		{
+			prName:           "no-status-no-taskruns",
+			prStatus:         v1beta1.PipelineRunStatus{},
+			trs:              nil,
+			expectedPrStatus: v1beta1.PipelineRunStatus{},
+		}, {
+			prName:           "status-no-taskruns",
+			prStatus:         prStatusWithCondition,
+			trs:              nil,
+			expectedPrStatus: prStatusWithCondition,
+		}, {
+			prName:   "status-nil-taskruns",
+			prStatus: prStatusWithEmptyChildRefs,
+			trs: []*v1beta1.TaskRun{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "pr-task-1-xxyyy",
+						Labels: map[string]string{
+							pipeline.PipelineTaskLabelKey: "task-1",
+						},
+						OwnerReferences: []metav1.OwnerReference{{UID: prUID}},
+					},
+				},
+			},
+			expectedPrStatus: prStatusRecoveredSimple,
+		}, {
+			prName:   "status-missing-taskruns",
+			prStatus: prStatusWithCondition,
+			trs: []*v1beta1.TaskRun{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "pr-task-3-xxyyy",
+						Labels: map[string]string{
+							pipeline.PipelineTaskLabelKey: "task-3",
+						},
+						OwnerReferences: []metav1.OwnerReference{{UID: prUID}},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "pr-task-3-successful-condition-check-xxyyy",
+						Labels: map[string]string{
+							pipeline.PipelineTaskLabelKey: "task-3",
+							pipeline.ConditionCheckKey:    "pr-task-3-successful-condition-check-xxyyy",
+							pipeline.ConditionNameKey:     "successful-condition",
+						},
+						OwnerReferences: []metav1.OwnerReference{{UID: prUID}},
+					},
+				},
+			},
+			expectedPrStatus: prStatusWithCondition,
+		}, {
+			prName:           "status-matching-taskruns-pr",
+			prStatus:         prStatusWithCondition,
+			trs:              allTaskRuns,
+			expectedPrStatus: prStatusWithCondition,
+		}, {
+			prName:           "orphaned-taskruns-pr",
+			prStatus:         prStatusWithOrphans,
+			trs:              allTaskRuns,
+			expectedPrStatus: prStatusRecovered,
+		}, {
+			prName:           "tr-from-another-pr",
+			prStatus:         prStatusWithEmptyChildRefs,
+			trs:              taskRunsFromAnotherPR,
+			expectedPrStatus: prStatusWithEmptyChildRefs,
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.prName, func(t *testing.T) {
+			logger := logtesting.TestLogger(t)
+
+			pr := &v1beta1.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{Name: tc.prName, UID: prUID},
+				Status:     tc.prStatus,
+			}
+
+			_ = updatePipelineRunStatusFromChildRefs(logger, pr, tc.trs, nil)
+
+			actualPrStatus := pr.Status
+
+			actualChildRefs := actualPrStatus.ChildReferences
+			if len(actualChildRefs) != 0 {
+				var fixedChildRefs []v1beta1.ChildStatusReference
+				re := regexp.MustCompile(`^[a-z\-]*?-task-[0-9]`)
+				for _, cr := range actualChildRefs {
+					cr.Name = fmt.Sprintf("%s-xxyyy", re.FindString(cr.Name))
+					fixedChildRefs = append(fixedChildRefs, cr)
 				}
-				actualChildRefs := actualPrStatus.ChildReferences
-				if len(actualChildRefs) != 0 {
-					var fixedChildRefs []v1beta1.ChildStatusReference
-					re := regexp.MustCompile(`^[a-z\-]*?-task-[0-9]`)
-					for _, cr := range actualChildRefs {
-						cr.Name = fmt.Sprintf("%s-xxyyy", re.FindString(cr.Name))
-						fixedChildRefs = append(fixedChildRefs, cr)
-					}
-					actualPrStatus.ChildReferences = fixedChildRefs
-				}
+				actualPrStatus.ChildReferences = fixedChildRefs
+			}
 
-				// Sort the ChildReferences to deal with annoying ordering issues.
-				sort.Slice(actualPrStatus.ChildReferences, func(i, j int) bool {
-					return actualPrStatus.ChildReferences[i].PipelineTaskName < actualPrStatus.ChildReferences[j].PipelineTaskName
-				})
-
-				if d := cmp.Diff(expectedPRStatus, actualPrStatus); d != "" {
-					t.Errorf("expected the PipelineRun status to match %#v. Diff %s", expectedPRStatus, diff.PrintWantGot(d))
-				}
+			// Sort the ChildReferences to deal with annoying ordering issues.
+			sort.Slice(actualPrStatus.ChildReferences, func(i, j int) bool {
+				return actualPrStatus.ChildReferences[i].PipelineTaskName < actualPrStatus.ChildReferences[j].PipelineTaskName
 			})
-		}
+
+			if d := cmp.Diff(tc.expectedPrStatus, actualPrStatus); d != "" {
+				t.Errorf("expected the PipelineRun status to match %#v. Diff %s", tc.expectedPrStatus, diff.PrintWantGot(d))
+			}
+		})
 	}
 }
 
@@ -9228,37 +9563,16 @@ func shouldHaveMinimalEmbeddedStatus(embeddedVal string) bool {
 	return embeddedVal == config.MinimalEmbeddedStatus || embeddedVal == config.BothEmbeddedStatus
 }
 
-func prStatusForEmbeddedStatus(input v1beta1.PipelineRunStatus, embeddedVal string) v1beta1.PipelineRunStatus {
-	output := input
-	if shouldHaveMinimalEmbeddedStatus(embeddedVal) {
-		for k, v := range input.TaskRuns {
-			cr := v1beta1.ChildStatusReference{
-				TypeMeta: runtime.TypeMeta{
-					APIVersion: v1beta1.SchemeGroupVersion.String(),
-					Kind:       "TaskRun",
-				},
-				Name:             k,
-				PipelineTaskName: v.PipelineTaskName,
-				WhenExpressions:  v.WhenExpressions,
-			}
-
-			for ccName, ccVal := range v.ConditionChecks {
-				cr.ConditionChecks = append(cr.ConditionChecks, &v1beta1.PipelineRunChildConditionCheckStatus{
-					PipelineRunConditionCheckStatus: *ccVal,
-					ConditionCheckName:              ccName,
-				})
-			}
-			output.ChildReferences = append(output.ChildReferences, cr)
-		}
+func childRefForPipelineTask(taskRunName, pipelineTaskName, kind, apiVersion string, whenExpressions []v1beta1.WhenExpression,
+	conditionChecks []*v1beta1.PipelineRunChildConditionCheckStatus) v1beta1.ChildStatusReference {
+	return v1beta1.ChildStatusReference{
+		TypeMeta: runtime.TypeMeta{
+			APIVersion: fmt.Sprintf("%s/%s", pipeline.GroupName, apiVersion),
+			Kind:       kind,
+		},
+		Name:             taskRunName,
+		PipelineTaskName: pipelineTaskName,
+		WhenExpressions:  whenExpressions,
+		ConditionChecks:  conditionChecks,
 	}
-	if !shouldHaveFullEmbeddedStatus(embeddedVal) {
-		output.TaskRuns = nil
-	}
-
-	// Sort the ChildReferences to deal with annoying ordering issues.
-	sort.Slice(output.ChildReferences, func(i, j int) bool {
-		return output.ChildReferences[i].PipelineTaskName < output.ChildReferences[j].PipelineTaskName
-	})
-
-	return output
 }

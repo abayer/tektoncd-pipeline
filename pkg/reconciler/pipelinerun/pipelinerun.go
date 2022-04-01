@@ -1415,7 +1415,7 @@ func updatePipelineRunStatusFromChildRefs(logger *zap.SugaredLogger, pr *v1beta1
 			continue
 		}
 
-		if _, ok := childRefByPipelineTask[pipelineTaskName]; !ok {
+		if _, ok := taskRunNameByPipelineTask[pipelineTaskName]; !ok {
 			// This tr was missing from the status.
 			// Add it without conditions, which are handled in the next loop
 			logger.Infof("Found a TaskRun %s that was missing from the PipelineRun status", tr.Name)
