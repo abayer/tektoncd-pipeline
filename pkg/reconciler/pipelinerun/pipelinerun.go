@@ -1431,6 +1431,35 @@ func updatePipelineRunStatusFromChildRefs(logger *zap.SugaredLogger, pr *v1beta1
 			}
 		}
 	}
+
+	// Loop over all the Runs associated to Tasks
+	for _, r := range runs {
+		// Only process Runs that are owned by this PipelineRun.
+		// This skips Runs that are indirectly created by the PipelineRun (e.g. by custom tasks).
+		if len(r.OwnerReferences) < 1 || r.OwnerReferences[0].UID != pr.ObjectMeta.UID {
+			logger.Debugf("Found a Run %s that is not owned by this PipelineRun", r.Name)
+			continue
+		}
+		lbls := r.GetLabels()
+		pipelineTaskName := lbls[pipeline.PipelineTaskLabelKey]
+
+		if _, ok := childRefByPipelineTask[pipelineTaskName]; !ok {
+			// This run was missing from the status.
+			// Add it without conditions, which are handled in the next loop
+			logger.Infof("Found a Run %s that was missing from the PipelineRun status", r.Name)
+
+			// Since this was recovered now, add it to the map, or it might be overwritten
+			childRefByPipelineTask[pipelineTaskName] = &v1beta1.ChildStatusReference{
+				TypeMeta: runtime.TypeMeta{
+					APIVersion: v1alpha1.SchemeGroupVersion.String(),
+					Kind:       "Run",
+				},
+				Name:             r.Name,
+				PipelineTaskName: pipelineTaskName,
+			}
+		}
+	}
+
 	// Then loop by pipelinetask name over all the TaskRuns associated to Conditions
 	for pipelineTaskName, actualConditionTaskRuns := range conditionTaskRuns {
 		ok := false
@@ -1468,29 +1497,6 @@ func updatePipelineRunStatusFromChildRefs(logger *zap.SugaredLogger, pr *v1beta1
 					PipelineRunConditionCheckStatus: *v,
 					ConditionCheckName:              k,
 				})
-		}
-	}
-
-	// Loop over all the Runs associated to Tasks
-	for _, run := range runs {
-		// Only process Runs that are owned by this PipelineRun.
-		// This skips Runs that are indirectly created by the PipelineRun (e.g. by custom tasks).
-		if len(run.OwnerReferences) < 1 && run.OwnerReferences[0].UID != pr.ObjectMeta.UID {
-			logger.Debugf("Found a Run %s that is not owned by this PipelineRun", run.Name)
-			continue
-		}
-		lbls := run.GetLabels()
-		pipelineTaskName := lbls[pipeline.PipelineTaskLabelKey]
-		if _, ok := childRefByPipelineTask[run.Name]; !ok {
-			// This run was missing from the status.
-			childRefByPipelineTask[pipelineTaskName] = &v1beta1.ChildStatusReference{
-				TypeMeta: runtime.TypeMeta{
-					APIVersion: v1alpha1.SchemeGroupVersion.String(),
-					Kind:       "Run",
-				},
-				Name:             run.Name,
-				PipelineTaskName: pipelineTaskName,
-			}
 		}
 	}
 
