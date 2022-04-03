@@ -1204,12 +1204,12 @@ func (c *Reconciler) updatePipelineRunStatusFromInformer(ctx context.Context, pr
 		return err
 	}
 
-	c.updatePipelineRunStatusFromSlices(ctx, logger, pr, taskRuns, runs)
+	updatePipelineRunStatusFromSlices(ctx, logger, pr, taskRuns, runs)
 
 	return nil
 }
 
-func (c *Reconciler) updatePipelineRunStatusFromSlices(ctx context.Context, logger *zap.SugaredLogger, pr *v1beta1.PipelineRun, taskRuns []*v1beta1.TaskRun, runs []*v1alpha1.Run) {
+func updatePipelineRunStatusFromSlices(ctx context.Context, logger *zap.SugaredLogger, pr *v1beta1.PipelineRun, taskRuns []*v1beta1.TaskRun, runs []*v1alpha1.Run) {
 	taskNameByPipelineTask := make(map[string]string)
 
 	cfg := config.FromContextOrDefaults(ctx)
@@ -1222,6 +1222,9 @@ func (c *Reconciler) updatePipelineRunStatusFromSlices(ctx context.Context, logg
 	if fullEmbedded {
 		updatePipelineRunStatusFromTaskRuns(logger, pr, taskRuns, taskNameByPipelineTask)
 		updatePipelineRunStatusFromRuns(logger, pr, runs)
+	} else {
+		pr.Status.TaskRuns = make(map[string]*v1beta1.PipelineRunTaskRunStatus)
+		pr.Status.Runs = make(map[string]*v1beta1.PipelineRunRunStatus)
 	}
 }
 
@@ -1360,7 +1363,7 @@ func updatePipelineRunStatusFromRuns(logger *zap.SugaredLogger, pr *v1beta1.Pipe
 	for _, run := range runs {
 		// Only process Runs that are owned by this PipelineRun.
 		// This skips Runs that are indirectly created by the PipelineRun (e.g. by custom tasks).
-		if len(run.OwnerReferences) < 1 && run.OwnerReferences[0].UID != pr.ObjectMeta.UID {
+		if len(run.OwnerReferences) < 1 || run.OwnerReferences[0].UID != pr.ObjectMeta.UID {
 			logger.Debugf("Found a Run %s that is not owned by this PipelineRun", run.Name)
 			continue
 		}
