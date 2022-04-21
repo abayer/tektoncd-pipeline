@@ -227,7 +227,7 @@ func TestExamples(t *testing.T) {
 		t.Fatal(err.Error())
 		return
 	}
-	testYamls(t, "../examples", kubectlCreate, pf)
+	testYamls(t, "../examples/v1alpha1", kubectlCreate, pf)
 }
 
 func TestYamls(t *testing.T) {
@@ -244,6 +244,9 @@ func testYamls(t *testing.T, baseDir string, createFunc createFunc, filter pathF
 	for _, path := range getExamplePaths(t, baseDir, filter) {
 		path := path // capture range variable
 		testName := extractTestName(baseDir, path)
+		if testName != "pipelineruns/output-pipelinerun" {
+			continue
+		}
 		waitValidateFunc := waitValidatePipelineRunDone
 		kind := "pipelinerun"
 
