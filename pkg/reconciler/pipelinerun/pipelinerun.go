@@ -285,7 +285,8 @@ func (c *Reconciler) resolvePipelineState(
 	tasks []v1beta1.PipelineTask,
 	pipelineMeta *metav1.ObjectMeta,
 	pr *v1beta1.PipelineRun,
-	providedResources map[string]*v1alpha1.PipelineResource) (resources.PipelineRunState, error) {
+	providedResources map[string]*v1alpha1.PipelineResource,
+	getPipelineFunc resources.GetPipeline) (resources.PipelineRunState, error) {
 	pst := resources.PipelineRunState{}
 	// Resolve each task individually because they each could have a different reference context (remote or local).
 	for _, task := range tasks {
@@ -308,6 +309,10 @@ func (c *Reconciler) resolvePipelineState(
 			},
 			func(name string) (*v1alpha1.Run, error) {
 				return c.runLister.Runs(pr.Namespace).Get(name)
+			},
+			getPipelineFunc,
+			func(name string) (*v1beta1.PipelineRun, error) {
+				return c.pipelineRunLister.PipelineRuns(pr.Namespace).Get(name)
 			},
 			func(name string) (*v1alpha1.Condition, error) {
 				return c.conditionLister.Conditions(pr.Namespace).Get(name)
@@ -487,7 +492,7 @@ func (c *Reconciler) reconcile(ctx context.Context, pr *v1beta1.PipelineRun, get
 	if len(pipelineSpec.Finally) > 0 {
 		tasks = append(tasks, pipelineSpec.Finally...)
 	}
-	pipelineRunState, err := c.resolvePipelineState(ctx, tasks, pipelineMeta, pr, providedResources)
+	pipelineRunState, err := c.resolvePipelineState(ctx, tasks, pipelineMeta, pr, providedResources, getPipelineFunc)
 	switch {
 	case errors.Is(err, remote.ErrorRequestInProgress):
 		message := fmt.Sprintf("PipelineRun %s/%s awaiting remote resource", pr.Namespace, pr.Name)

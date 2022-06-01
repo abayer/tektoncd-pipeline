@@ -75,10 +75,20 @@ type ResolvedPipelineRunTask struct {
 	CustomTask            bool
 	RunName               string
 	Run                   *v1alpha1.Run
+	PipelineRunName       string
+	PipelineRun           *v1beta1.PipelineRun
 	PipelineTask          *v1beta1.PipelineTask
 	ResolvedTaskResources *resources.ResolvedTaskResources
+	ResolvedChildPipeline *ResolvedChildPipeline
 	// ConditionChecks ~~TaskRuns but for evaling conditions
 	ResolvedConditionChecks TaskConditionCheckState // Could also be a TaskRun or maybe just a Pod?
+}
+
+// ResolvedChildPipeline contains all the data needed to execute a child PipelineRun: the PipelineRun, if it exists,
+// and the Pipeline spec.
+type ResolvedChildPipeline struct {
+	PipelineName string
+	PipelineSpec *v1beta1.PipelineSpec
 }
 
 // IsDone returns true only if the task is skipped, succeeded or failed
@@ -103,6 +113,11 @@ func (t ResolvedPipelineRunTask) IsRunning() bool {
 // IsCustomTask returns true if the PipelineTask references a Custom Task.
 func (t ResolvedPipelineRunTask) IsCustomTask() bool {
 	return t.CustomTask
+}
+
+// IsPipeline returns true if the PipelineTask references a Pipeline.
+func (t ResolvedPipelineRunTask) IsPipeline() bool {
+	return t.PipelineTask != nil && (t.PipelineTask.PipelineRef != nil || t.PipelineTask.PipelineSpec != nil)
 }
 
 // IsSuccessful returns true only if the run has completed successfully
@@ -471,6 +486,8 @@ func ResolvePipelineRunTask(
 	getTask resources.GetTask,
 	getTaskRun resources.GetTaskRun,
 	getRun GetRun,
+	getPipeline GetPipeline,
+	getPipelineRun GetPipelineRun,
 	getCondition GetCondition,
 	task v1beta1.PipelineTask,
 	providedResources map[string]*resourcev1alpha1.PipelineResource,
@@ -480,17 +497,58 @@ func ResolvePipelineRunTask(
 		PipelineTask: &task,
 	}
 	rprt.CustomTask = isCustomTask(ctx, rprt)
-	if rprt.IsCustomTask() {
+	switch {
+	case rprt.IsCustomTask():
 		rprt.RunName = getRunName(pipelineRun.Status.Runs, pipelineRun.Status.ChildReferences, task.Name, pipelineRun.Name)
 		run, err := getRun(rprt.RunName)
 		if err != nil && !kerrors.IsNotFound(err) {
 			return nil, fmt.Errorf("error retrieving Run %s: %w", rprt.RunName, err)
 		}
 		rprt.Run = run
-	} else {
+	case rprt.IsPipeline():
+		rprt.PipelineRunName = getChildPipelineRunName(pipelineRun.Status.ChildReferences, task.Name, pipelineRun.Name)
+		childPR, err := getPipelineRun(rprt.PipelineRunName)
+		if err != nil && !kerrors.IsNotFound(err) {
+			return nil, fmt.Errorf("error retrieving PipelineRun %s: %w", rprt.PipelineRunName, err)
+		}
+		if childPR != nil {
+			rprt.PipelineRun = childPR
+		}
+		var (
+			p            v1beta1.PipelineObject
+			spec         v1beta1.PipelineSpec
+			pipelineName string
+		)
+		if task.PipelineRef != nil {
+			// If the PipelineRun has already a stored PipelineSpec in its status, use it as source of truth
+			if childPR != nil && childPR.Status.PipelineSpec != nil {
+				spec = *childPR.Status.PipelineSpec
+				pipelineName = task.PipelineRef.Name
+			} else {
+				p, err = getPipeline(ctx, task.PipelineRef.Name)
+				switch {
+				case errors.Is(err, remote.ErrorRequestInProgress):
+					return nil, err
+				case err != nil:
+					return nil, &TaskNotFoundError{
+						Name: task.PipelineRef.Name,
+						Msg:  err.Error(),
+					}
+				default:
+					spec = p.PipelineSpec()
+					pipelineName = p.PipelineMetadata().Name
+				}
+			}
+		} else {
+			spec = *task.PipelineSpec
+		}
+		spec.SetDefaults(ctx)
+		rprt.ResolvedChildPipeline = &ResolvedChildPipeline{
+			PipelineName: pipelineName,
+			PipelineSpec: &spec,
+		}
+	default:
 		rprt.TaskRunName = GetTaskRunName(pipelineRun.Status.TaskRuns, pipelineRun.Status.ChildReferences, task.Name, pipelineRun.Name)
-
-		// Find the Task that this PipelineTask is using
 		var (
 			t        v1beta1.TaskObject
 			err      error
@@ -498,7 +556,6 @@ func ResolvePipelineRunTask(
 			taskName string
 			kind     v1beta1.TaskKind
 		)
-
 		taskRun, err := getTaskRun(rprt.TaskRunName)
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
@@ -508,7 +565,6 @@ func ResolvePipelineRunTask(
 		if taskRun != nil {
 			rprt.TaskRun = taskRun
 		}
-
 		if task.TaskRef != nil {
 			// If the TaskRun has already a store TaskSpec in its status, use it as source of truth
 			if taskRun != nil && taskRun.Status.TaskSpec != nil {
@@ -538,10 +594,7 @@ func ResolvePipelineRunTask(
 		if err != nil {
 			return nil, fmt.Errorf("couldn't match referenced resources with declared resources: %w", err)
 		}
-
 		rprt.ResolvedTaskResources = rtr
-
-		// Get all conditions that this pipelineTask will be using, if any
 		if len(task.Conditions) > 0 {
 			rcc, err := resolveConditionChecks(&task, pipelineRun.Status.TaskRuns, pipelineRun.Status.ChildReferences, rprt.TaskRunName, getTaskRun, getCondition, providedResources)
 			if err != nil {
@@ -605,6 +658,18 @@ func getRunName(runsStatus map[string]*v1beta1.PipelineRunRunStatus, childRefs [
 	for k, v := range runsStatus {
 		if v.PipelineTaskName == ptName {
 			return k
+		}
+	}
+
+	return kmeta.ChildName(prName, fmt.Sprintf("-%s", ptName))
+}
+
+// getChildPipelineRunName should return a unique name for a child `PipelineRun` if one has not already
+// been defined, and the existing one otherwise.
+func getChildPipelineRunName(childRefs []v1beta1.ChildStatusReference, ptName, prName string) string {
+	for _, cr := range childRefs {
+		if cr.Kind == "PipelineRun" && cr.PipelineTaskName == ptName {
+			return cr.Name
 		}
 	}
 

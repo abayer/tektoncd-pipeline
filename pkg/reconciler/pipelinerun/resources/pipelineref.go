@@ -105,6 +105,9 @@ func (l *LocalPipelineRefResolver) GetPipeline(ctx context.Context, name string)
 	return l.Tektonclient.TektonV1beta1().Pipelines(l.Namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// GetPipelineRun is a function that will retrieve a PipelineRun by name.
+type GetPipelineRun func(name string) (*v1beta1.PipelineRun, error)
+
 // resolvePipeline accepts an impl of remote.Resolver and attempts to
 // fetch a pipeline with given name. An error is returned if the
 // resolution doesn't work or the returned data isn't a valid
