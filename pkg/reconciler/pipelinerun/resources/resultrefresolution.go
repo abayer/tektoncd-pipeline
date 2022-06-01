@@ -35,6 +35,7 @@ type ResolvedResultRef struct {
 	ResultReference v1beta1.ResultRef
 	FromTaskRun     string
 	FromRun         string
+	FromPipelineRun string // TODO(abayer): Find all the things referencing the other From*s and do equivalent
 }
 
 // ResolveResultRef resolves any ResultReference that are found in the target ResolvedPipelineRunTask
@@ -138,17 +139,25 @@ func resolveResultRef(pipelineState PipelineRunState, resultRef *v1beta1.ResultR
 		return nil, resultRef.PipelineTask, fmt.Errorf("task %q referenced by result was not successful", referencedPipelineTask.PipelineTask.Name)
 	}
 
-	var runName, runValue, taskRunName string
+	var runName, runValue, taskRunName, pipelineRunName string
 	var resultValue v1beta1.ArrayOrString
 	var err error
-	if referencedPipelineTask.IsCustomTask() {
+	switch {
+	case referencedPipelineTask.IsCustomTask():
 		runName = referencedPipelineTask.Run.Name
 		runValue, err = findRunResultForParam(referencedPipelineTask.Run, resultRef)
 		resultValue = *v1beta1.NewArrayOrString(runValue)
 		if err != nil {
 			return nil, resultRef.PipelineTask, err
 		}
-	} else {
+	case referencedPipelineTask.IsPipeline():
+		pipelineRunName = referencedPipelineTask.PipelineRun.Name
+		prValue, err := findPipelineResultForParam(referencedPipelineTask.PipelineRun, resultRef)
+		resultValue = *v1beta1.NewArrayOrString(prValue)
+		if err != nil {
+			return nil, resultRef.PipelineTask, err
+		}
+	default:
 		taskRunName = referencedPipelineTask.TaskRun.Name
 		resultValue, err = findTaskResultForParam(referencedPipelineTask.TaskRun, resultRef)
 		if err != nil {
@@ -160,6 +169,7 @@ func resolveResultRef(pipelineState PipelineRunState, resultRef *v1beta1.ResultR
 		Value:           resultValue,
 		FromTaskRun:     taskRunName,
 		FromRun:         runName,
+		FromPipelineRun: pipelineRunName,
 		ResultReference: *resultRef,
 	}, "", nil
 }
@@ -182,6 +192,16 @@ func findTaskResultForParam(taskRun *v1beta1.TaskRun, reference *v1beta1.ResultR
 		}
 	}
 	return v1beta1.ArrayOrString{}, fmt.Errorf("Could not find result with name %s for task %s", reference.Result, reference.PipelineTask)
+}
+
+func findPipelineResultForParam(pr *v1beta1.PipelineRun, reference *v1beta1.ResultRef) (string, error) {
+	results := pr.Status.PipelineResults
+	for _, result := range results {
+		if result.Name == reference.Result {
+			return result.Value, nil
+		}
+	}
+	return "", fmt.Errorf("Could not find result with name %s for task %s", reference.Result, reference.PipelineTask)
 }
 
 func (rs ResolvedResultRefs) getStringReplacements() map[string]string {

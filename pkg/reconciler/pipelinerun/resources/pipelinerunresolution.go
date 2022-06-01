@@ -98,11 +98,16 @@ func (t ResolvedPipelineRunTask) IsDone(facts *PipelineRunFacts) bool {
 
 // IsRunning returns true only if the task is neither succeeded, cancelled nor failed
 func (t ResolvedPipelineRunTask) IsRunning() bool {
-	if t.IsCustomTask() {
+	switch {
+	case t.IsCustomTask():
 		if t.Run == nil {
 			return false
 		}
-	} else {
+	case t.IsPipeline():
+		if t.PipelineRun == nil {
+			return false
+		}
+	default:
 		if t.TaskRun == nil {
 			return false
 		}
@@ -125,6 +130,9 @@ func (t ResolvedPipelineRunTask) IsSuccessful() bool {
 	if t.IsCustomTask() {
 		return t.Run != nil && t.Run.IsSuccessful()
 	}
+	if t.IsPipeline() {
+		return t.PipelineRun != nil && t.PipelineRun.IsSuccessful()
+	}
 	return t.TaskRun != nil && t.TaskRun.IsSuccessful()
 }
 
@@ -138,13 +146,20 @@ func (t ResolvedPipelineRunTask) IsFailure() bool {
 	}
 	var c *apis.Condition
 	var isDone bool
-	if t.IsCustomTask() {
+	switch {
+	case t.IsCustomTask():
 		if t.Run == nil {
 			return false
 		}
 		c = t.Run.Status.GetCondition(apis.ConditionSucceeded)
 		isDone = t.Run.IsDone()
-	} else {
+	case t.IsPipeline():
+		if t.PipelineRun == nil {
+			return false
+		}
+		c = t.PipelineRun.Status.GetCondition(apis.ConditionSucceeded)
+		isDone = t.PipelineRun.IsDone()
+	default:
 		if t.TaskRun == nil {
 			return false
 		}
@@ -158,12 +173,15 @@ func (t ResolvedPipelineRunTask) IsFailure() bool {
 // is less than the number of retries allowed.
 func (t ResolvedPipelineRunTask) HasRemainingRetries() bool {
 	var retriesDone int
-	if t.IsCustomTask() {
+	switch {
+	case t.IsPipeline():
+		return t.PipelineRun == nil
+	case t.IsCustomTask():
 		if t.Run == nil {
 			return true
 		}
 		retriesDone = len(t.Run.Status.RetriesStatus)
-	} else {
+	default:
 		if t.TaskRun == nil {
 			return true
 		}
@@ -181,6 +199,13 @@ func (t ResolvedPipelineRunTask) IsCancelled() bool {
 		c := t.Run.Status.GetCondition(apis.ConditionSucceeded)
 		return c != nil && c.IsFalse() && c.Reason == v1alpha1.RunReasonCancelled
 	}
+	if t.IsPipeline() {
+		if t.PipelineRun == nil {
+			return false
+		}
+		c := t.PipelineRun.Status.GetCondition(apis.ConditionSucceeded)
+		return c != nil && c.IsFalse() && c.Reason == v1beta1.PipelineRunReasonCancelled.String()
+	}
 	if t.TaskRun == nil {
 		return false
 	}
@@ -193,7 +218,9 @@ func (t ResolvedPipelineRunTask) IsCancelled() bool {
 func (t ResolvedPipelineRunTask) IsStarted() bool {
 	if t.IsCustomTask() {
 		return t.Run != nil && t.Run.Status.GetCondition(apis.ConditionSucceeded) != nil
-
+	}
+	if t.IsPipeline() {
+		return t.PipelineRun != nil && t.PipelineRun.Status.GetCondition(apis.ConditionSucceeded) != nil
 	}
 	return t.TaskRun != nil && t.TaskRun.Status.GetCondition(apis.ConditionSucceeded) != nil
 }
@@ -204,6 +231,9 @@ func (t ResolvedPipelineRunTask) IsConditionStatusFalse() bool {
 	if t.IsStarted() {
 		if t.IsCustomTask() {
 			return t.Run.Status.GetCondition(apis.ConditionSucceeded).IsFalse()
+		}
+		if t.IsPipeline() {
+			return t.PipelineRun.Status.GetCondition(apis.ConditionSucceeded).IsFalse()
 		}
 		return t.TaskRun.Status.GetCondition(apis.ConditionSucceeded).IsFalse()
 	}

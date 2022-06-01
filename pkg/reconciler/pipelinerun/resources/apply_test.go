@@ -1015,11 +1015,12 @@ func TestApplyWorkspaces(t *testing.T) {
 
 func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 	for _, tc := range []struct {
-		description string
-		results     []v1beta1.PipelineResult
-		taskResults map[string][]v1beta1.TaskRunResult
-		runResults  map[string][]v1alpha1.RunResult
-		expected    []v1beta1.PipelineRunResult
+		description    string
+		results        []v1beta1.PipelineResult
+		taskResults    map[string][]v1beta1.TaskRunResult
+		runResults     map[string][]v1alpha1.RunResult
+		childPRResults map[string][]v1beta1.PipelineRunResult
+		expected       []v1beta1.PipelineRunResult
 	}{{
 		description: "no-pipeline-results-no-returned-results",
 		results:     []v1beta1.PipelineResult{},
@@ -1214,9 +1215,86 @@ func TestApplyTaskResultsToPipelineResults(t *testing.T) {
 			Name:  "pipeline-result-2",
 			Value: "do, rae, mi, rae, do",
 		}},
+	}, {
+		description: "no-pipelinerun-results-no-returned-results",
+		results: []v1beta1.PipelineResult{{
+			Name:  "foo",
+			Value: "$(tasks.childpr.results.foo)",
+		}},
+		childPRResults: map[string][]v1beta1.PipelineRunResult{},
+		expected:       nil,
+	}, {
+		description: "wrong-pipelinerun-name-no-returned-result",
+		results: []v1beta1.PipelineResult{{
+			Name:  "foo",
+			Value: "$(tasks.childpr.results.foo)",
+		}},
+		childPRResults: map[string][]v1beta1.PipelineRunResult{
+			"different-pr": {{
+				Name:  "foo",
+				Value: "bar",
+			}},
+		},
+		expected: nil,
+	}, {
+		description: "right-pipelinerun-name-wrong-result-name-no-returned-result",
+		results: []v1beta1.PipelineResult{{
+			Name:  "foo",
+			Value: "$(tasks.childpr.results.foo)",
+		}},
+		childPRResults: map[string][]v1beta1.PipelineRunResult{
+			"childpr": {{
+				Name:  "notfoo",
+				Value: "bar",
+			}},
+		},
+		expected: nil,
+	}, {
+		description: "unsuccessful-pipelinerun-no-returned-result",
+		results: []v1beta1.PipelineResult{{
+			Name:  "foo",
+			Value: "$(tasks.childpr.results.foo)",
+		}},
+		childPRResults: map[string][]v1beta1.PipelineRunResult{
+			"childpr": {},
+		},
+		expected: nil,
+	}, {
+		description: "multiple-results-pipelineruns-and-tasks",
+		results: []v1beta1.PipelineResult{{
+			Name:  "pipeline-result-1",
+			Value: "$(tasks.childpr.results.foo)",
+		}, {
+			Name:  "pipeline-result-2",
+			Value: "$(tasks.childpr.results.foo), $(tasks.normaltask.results.baz), $(tasks.childpr.results.bar), $(tasks.normaltask.results.baz), $(tasks.childpr.results.foo)",
+		}},
+		childPRResults: map[string][]v1beta1.PipelineRunResult{
+			"childpr": {
+				{
+					Name:  "foo",
+					Value: "do",
+				}, {
+					Name:  "bar",
+					Value: "mi",
+				},
+			},
+		},
+		taskResults: map[string][]v1beta1.TaskRunResult{
+			"normaltask": {{
+				Name:  "baz",
+				Value: *v1beta1.NewArrayOrString("rae"),
+			}},
+		},
+		expected: []v1beta1.PipelineRunResult{{
+			Name:  "pipeline-result-1",
+			Value: "do",
+		}, {
+			Name:  "pipeline-result-2",
+			Value: "do, rae, mi, rae, do",
+		}},
 	}} {
 		t.Run(tc.description, func(t *testing.T) {
-			received := ApplyTaskResultsToPipelineResults(tc.results, tc.taskResults, tc.runResults)
+			received := ApplyTaskResultsToPipelineResults(tc.results, tc.taskResults, tc.runResults, tc.childPRResults)
 			if d := cmp.Diff(tc.expected, received); d != "" {
 				t.Errorf(diff.PrintWantGot(d))
 			}

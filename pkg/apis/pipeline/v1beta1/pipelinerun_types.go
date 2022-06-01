@@ -81,6 +81,11 @@ func (pr *PipelineRun) HasStarted() bool {
 	return pr.Status.StartTime != nil && !pr.Status.StartTime.IsZero()
 }
 
+// IsSuccessful returns true if the PipelineRun's status indicates that it is done.
+func (pr *PipelineRun) IsSuccessful() bool {
+	return pr.Status.GetCondition(apis.ConditionSucceeded).IsTrue()
+}
+
 // IsCancelled returns true if the PipelineRun's spec status is set to Cancelled state
 func (pr *PipelineRun) IsCancelled() bool {
 	return pr.Spec.Status == PipelineRunSpecStatusCancelled || pr.Spec.Status == PipelineRunSpecStatusCancelledDeprecated
@@ -555,6 +560,19 @@ type PipelineRunRunStatus struct {
 	WhenExpressions []WhenExpression `json:"whenExpressions,omitempty"`
 }
 
+// PipelineRunPipelineRunStatus contains the name of the PipelineTask for this PipelineRun and the PipelineRun's Status
+type PipelineRunPipelineRunStatus struct {
+	// PipelineTaskName is the name of the PipelineTask.
+	PipelineTaskName string `json:"pipelineTaskName,omitempty"`
+	// Status is the PipelineRunStatus for the corresponding PipelineRun
+	// +optional
+	Status *PipelineRunStatus `json:"status,omitempty"`
+	// WhenExpressions is the list of checks guarding the execution of the PipelineTask
+	// +optional
+	// +listType=atomic
+	WhenExpressions []WhenExpression `json:"whenExpressions,omitempty"`
+}
+
 // PipelineRunConditionCheckStatus returns the condition check status
 type PipelineRunConditionCheckStatus struct {
 	// ConditionName is the name of the Condition
@@ -614,6 +632,9 @@ type PipelinePipelineRunSpec struct {
 	PipelineTaskName   string         `json:"pipelineTaskName,omitempty"`
 	ServiceAccountName string         `json:"serviceAccountName,omitempty"`
 	Timeouts           *TimeoutFields `json:"timeouts,omitempty"`
+
+	// +optional
+	Metadata *PipelineTaskMetadata `json:"metadata,omitempty"`
 }
 
 // GetTaskRunSpec returns the task specific spec for a given
@@ -635,6 +656,26 @@ func (pr *PipelineRun) GetTaskRunSpec(pipelineTaskName string) PipelineTaskRunSp
 			s.StepOverrides = task.StepOverrides
 			s.SidecarOverrides = task.SidecarOverrides
 			s.Metadata = task.Metadata
+		}
+	}
+	return s
+}
+
+// GetPipelinePipelineRunSpec returns the pipeline specific spec for a given
+// PipelineTask if configured, otherwise it returns the PipelineRun's default.
+func (pr *PipelineRun) GetPipelinePipelineRunSpec(pipelineTaskName string) PipelinePipelineRunSpec {
+	s := PipelinePipelineRunSpec{
+		PipelineTaskName:   pipelineTaskName,
+		ServiceAccountName: pr.GetServiceAccountName(pipelineTaskName),
+		Timeouts:           pr.Spec.Timeouts,
+	}
+	for _, prSpec := range pr.Spec.PipelineRunSpecs {
+		if prSpec.PipelineTaskName == pipelineTaskName {
+			if prSpec.ServiceAccountName != "" {
+				s.ServiceAccountName = prSpec.ServiceAccountName
+			}
+			s.Timeouts = prSpec.Timeouts
+			s.Metadata = prSpec.Metadata
 		}
 	}
 	return s

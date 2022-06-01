@@ -2641,9 +2641,10 @@ func TestPipelineRunState_GetChildReferences(t *testing.T) {
 	successrcc, successConditionCheckStatus, failingrcc, failingConditionCheckStatus := getConditionCheckStatusData(t)
 
 	testCases := []struct {
-		name      string
-		state     PipelineRunState
-		childRefs []v1beta1.ChildStatusReference
+		name             string
+		state            PipelineRunState
+		justPipelineRuns bool
+		childRefs        []v1beta1.ChildStatusReference
 	}{
 		{
 			name:      "no-tasks",
@@ -2795,7 +2796,7 @@ func TestPipelineRunState_GetChildReferences(t *testing.T) {
 			}},
 		},
 		{
-			name: "task-and-custom-task",
+			name: "task-custom-task-and-pipeline",
 			state: PipelineRunState{{
 				TaskRunName: "single-task-run",
 				PipelineTask: &v1beta1.PipelineTask{
@@ -2825,6 +2826,19 @@ func TestPipelineRunState_GetChildReferences(t *testing.T) {
 					TypeMeta:   metav1.TypeMeta{APIVersion: "tekton.dev/v1alpha1"},
 					ObjectMeta: metav1.ObjectMeta{Name: "single-custom-task-run"},
 				},
+			}, {
+				PipelineRunName: "single-pipeline-run",
+				PipelineTask: &v1beta1.PipelineTask{
+					Name: "single-pipeline-run-1",
+					PipelineRef: &v1beta1.PipelineRef{
+						APIVersion: "v1beta1",
+						Name:       "single-pipeline",
+					},
+				},
+				PipelineRun: &v1beta1.PipelineRun{
+					TypeMeta:   metav1.TypeMeta{APIVersion: "tekton.dev/v1beta1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "single-pipeline-run"},
+				},
 			}},
 			childRefs: []v1beta1.ChildStatusReference{{
 				TypeMeta: runtime.TypeMeta{
@@ -2840,13 +2854,75 @@ func TestPipelineRunState_GetChildReferences(t *testing.T) {
 				},
 				Name:             "single-custom-task-run",
 				PipelineTaskName: "single-custom-task-1",
+			}, {
+				TypeMeta: runtime.TypeMeta{
+					APIVersion: "tekton.dev/v1beta1",
+					Kind:       "PipelineRun",
+				},
+				Name:             "single-pipeline-run",
+				PipelineTaskName: "single-pipeline-run-1",
+			}},
+		},
+		{
+			name:             "pipelineruns-only",
+			justPipelineRuns: true,
+			state: PipelineRunState{{
+				TaskRunName: "single-task-run",
+				PipelineTask: &v1beta1.PipelineTask{
+					Name: "single-task-1",
+					TaskRef: &v1beta1.TaskRef{
+						Name:       "single-task",
+						Kind:       "Task",
+						APIVersion: "v1beta1",
+					},
+				},
+				TaskRun: &v1beta1.TaskRun{
+					TypeMeta:   metav1.TypeMeta{APIVersion: "tekton.dev/v1beta1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "single-task-run"},
+				},
+			}, {
+				RunName:    "single-custom-task-run",
+				CustomTask: true,
+				PipelineTask: &v1beta1.PipelineTask{
+					Name: "single-custom-task-1",
+					TaskRef: &v1beta1.TaskRef{
+						APIVersion: "example.dev/v0",
+						Kind:       "Example",
+						Name:       "single-custom-task",
+					},
+				},
+				Run: &v1alpha1.Run{
+					TypeMeta:   metav1.TypeMeta{APIVersion: "tekton.dev/v1alpha1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "single-custom-task-run"},
+				},
+			}, {
+				PipelineRunName: "single-pipeline-run",
+				PipelineTask: &v1beta1.PipelineTask{
+					Name: "single-pipeline-run-1",
+					PipelineRef: &v1beta1.PipelineRef{
+						APIVersion: "v1beta1",
+						Name:       "single-pipeline",
+					},
+				},
+				PipelineRun: &v1beta1.PipelineRun{
+					TypeMeta:   metav1.TypeMeta{APIVersion: "tekton.dev/v1beta1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "single-pipeline-run"},
+				},
+			}},
+			childRefs: []v1beta1.ChildStatusReference{{
+				TypeMeta: runtime.TypeMeta{
+					APIVersion: "tekton.dev/v1beta1",
+					Kind:       "PipelineRun",
+				},
+				Name:             "single-pipeline-run",
+				PipelineTaskName: "single-pipeline-run-1",
 			}},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			childRefs := tc.state.GetChildReferences(v1beta1.SchemeGroupVersion.String(), v1alpha1.SchemeGroupVersion.String())
+			childRefs := tc.state.GetChildReferences(v1beta1.SchemeGroupVersion.String(), v1alpha1.SchemeGroupVersion.String(), tc.justPipelineRuns)
 			if d := cmp.Diff(tc.childRefs, childRefs); d != "" {
 				t.Errorf("Didn't get expected child references for %s: %s", tc.name, diff.PrintWantGot(d))
 			}

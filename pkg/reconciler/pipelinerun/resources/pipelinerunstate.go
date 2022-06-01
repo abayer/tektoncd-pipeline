@@ -97,9 +97,12 @@ func (state PipelineRunState) ToMap() map[string]*ResolvedPipelineRunTask {
 // IsBeforeFirstTaskRun returns true if the PipelineRun has not yet started its first TaskRun
 func (state PipelineRunState) IsBeforeFirstTaskRun() bool {
 	for _, t := range state {
-		if t.IsCustomTask() && t.Run != nil {
+		switch {
+		case t.IsCustomTask() && t.Run != nil:
 			return false
-		} else if t.TaskRun != nil {
+		case t.IsPipeline() && t.PipelineRun != nil:
+			return false
+		case t.TaskRun != nil:
 			return false
 		}
 	}
@@ -193,13 +196,30 @@ func (state PipelineRunState) GetTaskRunsStatus(pr *v1beta1.PipelineRun) map[str
 func (state PipelineRunState) GetTaskRunsResults() map[string][]v1beta1.TaskRunResult {
 	results := make(map[string][]v1beta1.TaskRunResult)
 	for _, rprt := range state {
-		if rprt.IsCustomTask() {
+		if rprt.IsCustomTask() || rprt.IsPipeline() {
 			continue
 		}
 		if !rprt.IsSuccessful() {
 			continue
 		}
 		results[rprt.PipelineTask.Name] = rprt.TaskRun.Status.TaskRunResults
+	}
+
+	return results
+}
+
+// GetPipelineRunsResults returns a map of all successfully completed PipelineRuns in the state, with the pipeline task name as
+// the key and the results from the corresponding PipelineRun as the value. It only includes tasks which have completed successfully.
+func (state PipelineRunState) GetPipelineRunsResults() map[string][]v1beta1.PipelineRunResult {
+	results := make(map[string][]v1beta1.PipelineRunResult)
+	for _, rprt := range state {
+		if !rprt.IsPipeline() {
+			continue
+		}
+		if !rprt.IsSuccessful() {
+			continue
+		}
+		results[rprt.PipelineTask.Name] = rprt.PipelineRun.Status.PipelineResults
 	}
 
 	return results
@@ -259,13 +279,18 @@ func (state PipelineRunState) GetRunsResults() map[string][]v1alpha1.RunResult {
 
 // GetChildReferences returns a slice of references, including version, kind, name, and pipeline task name, for all
 // TaskRuns and Runs in the state.
-func (state PipelineRunState) GetChildReferences(taskRunVersion string, runVersion string) []v1beta1.ChildStatusReference {
+func (state PipelineRunState) GetChildReferences(pipelineVersion string, runVersion string, pipelineRunsOnly bool) []v1beta1.ChildStatusReference {
 	var childRefs []v1beta1.ChildStatusReference
 
 	for _, rprt := range state {
+		// If we're using full embedded status, we still need to populate ChildReferences for PipelineRuns, but not for
+		// anything else.
+		if pipelineRunsOnly && !rprt.IsPipeline() {
+			continue
+		}
 		// If this is for a TaskRun, but there isn't yet a specified TaskRun and we haven't resolved condition checks yet,
 		// skip this entry.
-		if !rprt.CustomTask && rprt.TaskRun == nil && rprt.ResolvedConditionChecks == nil {
+		if !rprt.CustomTask && !rprt.IsPipeline() && rprt.TaskRun == nil && rprt.ResolvedConditionChecks == nil {
 			continue
 		}
 
@@ -274,23 +299,30 @@ func (state PipelineRunState) GetChildReferences(taskRunVersion string, runVersi
 		var childName string
 		var childConditions []*v1beta1.PipelineRunChildConditionCheckStatus
 
-		if rprt.CustomTask {
+		switch {
+		case rprt.CustomTask:
 			childName = rprt.RunName
 			childTaskKind = "Run"
-
 			if rprt.Run != nil {
 				childAPIVersion = rprt.Run.APIVersion
 			} else {
 				childAPIVersion = runVersion
 			}
-		} else {
+		case rprt.IsPipeline():
+			childName = rprt.PipelineRunName
+			childTaskKind = "PipelineRun"
+			if rprt.PipelineRun != nil {
+				childAPIVersion = rprt.PipelineRun.APIVersion
+			} else {
+				childAPIVersion = pipelineVersion
+			}
+		default:
 			childName = rprt.TaskRunName
 			childTaskKind = "TaskRun"
-
 			if rprt.TaskRun != nil {
 				childAPIVersion = rprt.TaskRun.APIVersion
 			} else {
-				childAPIVersion = taskRunVersion
+				childAPIVersion = pipelineVersion
 			}
 			if len(rprt.ResolvedConditionChecks) > 0 {
 				for _, c := range rprt.ResolvedConditionChecks {

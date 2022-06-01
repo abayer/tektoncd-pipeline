@@ -207,9 +207,9 @@ func replaceParamValues(params []v1beta1.Param, stringReplacements map[string]st
 	return params
 }
 
-// ApplyTaskResultsToPipelineResults applies the results of completed TasksRuns and Runs to a Pipeline's
+// ApplyTaskResultsToPipelineResults applies the results of completed TasksRuns, Runs, and child PipelineRuns to a Pipeline's
 // list of PipelineResults, returning the computed set of PipelineRunResults. References to
-// non-existent TaskResults or failed TaskRuns or Runs result in a PipelineResult being considered invalid
+// non-existent TaskResults or failed TaskRuns, Runs, or child PipelineRuns result in a PipelineResult being considered invalid
 // and omitted from the returned slice. A nil slice is returned if no results are passed in or all
 // results are invalid.
 func ApplyTaskResultsToPipelineResults(
@@ -217,7 +217,8 @@ func ApplyTaskResultsToPipelineResults(
 	// PipelineResults, right now we only update the StringVal from TaskResults to PipelineResults
 	results []v1beta1.PipelineResult,
 	taskRunResults map[string][]v1beta1.TaskRunResult,
-	customTaskResults map[string][]v1alpha1.RunResult) []v1beta1.PipelineRunResult {
+	customTaskResults map[string][]v1alpha1.RunResult,
+	childPipelineRunResults map[string][]v1beta1.PipelineRunResult) []v1beta1.PipelineRunResult {
 
 	var runResults []v1beta1.PipelineRunResult
 	stringReplacements := map[string]string{}
@@ -234,6 +235,8 @@ func ApplyTaskResultsToPipelineResults(
 				if resultValue := taskResultValue(taskName, resultName, taskRunResults); resultValue != nil {
 					stringReplacements[variable] = *resultValue
 				} else if resultValue := runResultValue(taskName, resultName, customTaskResults); resultValue != nil {
+					stringReplacements[variable] = *resultValue
+				} else if resultValue := pipelineRunResultValue(taskName, resultName, childPipelineRunResults); resultValue != nil {
 					stringReplacements[variable] = *resultValue
 				} else {
 					validPipelineResult = false
@@ -277,6 +280,18 @@ func runResultValue(taskName string, resultName string, runResults map[string][]
 	for _, runResult := range runResults[taskName] {
 		if runResult.Name == resultName {
 			return &runResult.Value
+		}
+	}
+	return nil
+}
+
+// pipelineRunResultValue returns the result value for a given pipeline task name and result name in a map of PipelineRunResults for
+// pipeline task names. It returns nil if either the pipeline task name isn't present in the map, or if there is no
+// result with the result name in the pipeline task name's slice of results.
+func pipelineRunResultValue(taskName string, resultName string, childPipelineRunResults map[string][]v1beta1.PipelineRunResult) *string {
+	for _, prResult := range childPipelineRunResults[taskName] {
+		if prResult.Name == resultName {
+			return &prResult.Value
 		}
 	}
 	return nil

@@ -195,6 +195,20 @@ var runs = []v1alpha1.Run{{
 	Spec: v1alpha1.RunSpec{},
 }}
 
+var childPipelineRuns = []v1beta1.PipelineRun{{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "namespace",
+		Name:      "pipelinerun-mytask20",
+	},
+	Spec: v1beta1.PipelineRunSpec{},
+}, {
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "namespace",
+		Name:      "pipelinerun-mytask21",
+	},
+	Spec: v1beta1.PipelineRunSpec{},
+}}
+
 var condition = v1alpha1.Condition{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "always-true",
@@ -236,6 +250,12 @@ func makeRunStarted(run v1alpha1.Run) *v1alpha1.Run {
 	return newRun
 }
 
+func makePipelineRunStarted(pr v1beta1.PipelineRun) *v1beta1.PipelineRun {
+	newPR := newPipelineRun(pr)
+	newPR.Status.Conditions[0].Status = corev1.ConditionUnknown
+	return newPR
+}
+
 func makeSucceeded(tr v1beta1.TaskRun) *v1beta1.TaskRun {
 	newTr := newTaskRun(tr)
 	newTr.Status.Conditions[0].Status = corev1.ConditionTrue
@@ -246,6 +266,12 @@ func makeRunSucceeded(run v1alpha1.Run) *v1alpha1.Run {
 	newRun := newRun(run)
 	newRun.Status.Conditions[0].Status = corev1.ConditionTrue
 	return newRun
+}
+
+func makePipelineRunSucceeded(pr v1beta1.PipelineRun) *v1beta1.PipelineRun {
+	newPR := newPipelineRun(pr)
+	newPR.Status.Conditions[0].Status = corev1.ConditionTrue
+	return newPR
 }
 
 func makeFailed(tr v1beta1.TaskRun) *v1beta1.TaskRun {
@@ -260,6 +286,12 @@ func makeRunFailed(run v1alpha1.Run) *v1alpha1.Run {
 	return newRun
 }
 
+func makePipelineRunFailed(pr v1beta1.PipelineRun) *v1beta1.PipelineRun {
+	newPR := newPipelineRun(pr)
+	newPR.Status.Conditions[0].Status = corev1.ConditionFalse
+	return newPR
+}
+
 func withCancelled(tr *v1beta1.TaskRun) *v1beta1.TaskRun {
 	tr.Status.Conditions[0].Reason = v1beta1.TaskRunSpecStatusCancelled
 	return tr
@@ -268,6 +300,11 @@ func withCancelled(tr *v1beta1.TaskRun) *v1beta1.TaskRun {
 func withRunCancelled(run *v1alpha1.Run) *v1alpha1.Run {
 	run.Status.Conditions[0].Reason = v1alpha1.RunReasonCancelled
 	return run
+}
+
+func withPipelineRunCancelled(pr *v1beta1.PipelineRun) *v1beta1.PipelineRun {
+	pr.Status.Conditions[0].Reason = v1beta1.PipelineRunSpecStatusCancelled
+	return pr
 }
 
 func withCancelledBySpec(tr *v1beta1.TaskRun) *v1beta1.TaskRun {
@@ -334,6 +371,21 @@ func newRun(run v1alpha1.Run) *v1alpha1.Run {
 		Spec: run.Spec,
 		Status: v1alpha1.RunStatus{
 			Status: duckv1.Status{
+				Conditions: []apis.Condition{{Type: apis.ConditionSucceeded}},
+			},
+		},
+	}
+}
+
+func newPipelineRun(pr v1beta1.PipelineRun) *v1beta1.PipelineRun {
+	return &v1beta1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: pr.Namespace,
+			Name:      pr.Name,
+		},
+		Spec: pr.Spec,
+		Status: v1beta1.PipelineRunStatus{
+			Status: duckv1beta1.Status{
 				Conditions: []apis.Condition{{Type: apis.ConditionSucceeded}},
 			},
 		},
@@ -1287,6 +1339,17 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
+		name: "pipelinerun not started",
+		task: ResolvedPipelineRunTask{
+			PipelineTask: &v1beta1.PipelineTask{
+				Name: "task",
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "some-pipeline",
+				},
+			},
+		},
+		want: false,
+	}, {
 		name: "taskrun running",
 		task: ResolvedPipelineRunTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
@@ -1294,12 +1357,23 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-
 		name: "run running",
 		task: ResolvedPipelineRunTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
 			Run:          makeRunStarted(runs[0]),
+		},
+		want: false,
+	}, {
+		name: "pipelinerun running",
+		task: ResolvedPipelineRunTask{
+			PipelineTask: &v1beta1.PipelineTask{
+				Name: "task",
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "some-pipeline",
+				},
+			},
+			PipelineRun: makePipelineRunStarted(childPipelineRuns[0]),
 		},
 		want: false,
 	}, {
@@ -1319,6 +1393,18 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
+		name: "pipelinerun succeeded",
+		task: ResolvedPipelineRunTask{
+			PipelineTask: &v1beta1.PipelineTask{
+				Name: "task",
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "some-pipeline",
+				},
+			},
+			PipelineRun: makePipelineRunSucceeded(childPipelineRuns[0]),
+		},
+		want: false,
+	}, {
 		name: "taskrun failed",
 		task: ResolvedPipelineRunTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
@@ -1332,6 +1418,18 @@ func TestIsFailure(t *testing.T) {
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
 			Run:          makeRunFailed(runs[0]),
+		},
+		want: true,
+	}, {
+		name: "pipelinerun failed",
+		task: ResolvedPipelineRunTask{
+			PipelineTask: &v1beta1.PipelineTask{
+				Name: "task",
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "some-pipeline",
+				},
+			},
+			PipelineRun: makePipelineRunFailed(childPipelineRuns[0]),
 		},
 		want: true,
 	}, {
@@ -1351,6 +1449,19 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
+		name: "pipelinerun failed: retries remaining", // TODO(abayer): For now, this always shows up as failed, because we're not doing pipelinerun retries.
+		task: ResolvedPipelineRunTask{
+			PipelineTask: &v1beta1.PipelineTask{
+				Name: "task",
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "some-pipeline",
+				},
+				Retries: 1,
+			},
+			PipelineRun: makePipelineRunFailed(childPipelineRuns[0]),
+		},
+		want: true,
+	}, {
 		name: "taskrun failed: no retries remaining",
 		task: ResolvedPipelineRunTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
@@ -1358,7 +1469,6 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: true,
 	}, {
-
 		name: "run failed: no retries remaining",
 		task: ResolvedPipelineRunTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
@@ -1397,6 +1507,30 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
+		name: "pipelinerun cancelled",
+		task: ResolvedPipelineRunTask{
+			PipelineTask: &v1beta1.PipelineTask{
+				Name: "task",
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "some-pipeline",
+				},
+			},
+			PipelineRun: withPipelineRunCancelled(makePipelineRunFailed(childPipelineRuns[0])),
+		},
+		want: true,
+	}, {
+		name: "pipelinerun cancelled but not failed",
+		task: ResolvedPipelineRunTask{
+			PipelineTask: &v1beta1.PipelineTask{
+				Name: "task",
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "some-pipeline",
+				},
+			},
+			PipelineRun: withPipelineRunCancelled(newPipelineRun(childPipelineRuns[0])),
+		},
+		want: false,
+	}, {
 		name: "taskrun cancelled: retries remaining",
 		task: ResolvedPipelineRunTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
@@ -1409,6 +1543,19 @@ func TestIsFailure(t *testing.T) {
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
 			Run:          withRunCancelled(makeRunFailed(runs[0])),
 			CustomTask:   true,
+		},
+		want: true,
+	}, {
+		name: "pipelinerun cancelled: retries remaining", // TODO(abayer): For now, this always shows up as failed, because we're not doing pipelinerun retries.
+		task: ResolvedPipelineRunTask{
+			PipelineTask: &v1beta1.PipelineTask{
+				Name: "task",
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "some-pipeline",
+				},
+				Retries: 1,
+			},
+			PipelineRun: withPipelineRunCancelled(makePipelineRunFailed(childPipelineRuns[0])),
 		},
 		want: true,
 	}, {
@@ -1431,7 +1578,6 @@ func TestIsFailure(t *testing.T) {
 			if got := tc.task.IsFailure(); got != tc.want {
 				t.Errorf("expected IsFailure: %t but got %t", tc.want, got)
 			}
-
 		})
 	}
 }
