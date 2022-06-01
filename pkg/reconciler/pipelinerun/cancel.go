@@ -101,7 +101,7 @@ func cancelPipelineRun(ctx context.Context, logger *zap.SugaredLogger, pr *v1bet
 func cancelPipelineTaskRuns(ctx context.Context, logger *zap.SugaredLogger, pr *v1beta1.PipelineRun, clientSet clientset.Interface) []string {
 	errs := []string{}
 
-	trNames, runNames, err := getChildObjectsFromPRStatus(ctx, pr.Status)
+	trNames, runNames, prNames, err := getChildObjectsFromPRStatus(ctx, pr.Status)
 	if err != nil {
 		errs = append(errs, err.Error())
 	}
@@ -124,16 +124,32 @@ func cancelPipelineTaskRuns(ctx context.Context, logger *zap.SugaredLogger, pr *
 		}
 	}
 
+	for _, prName := range prNames {
+		logger.Infof("cancelling PipelineRun %s", prName)
+
+		childPR, err := clientSet.TektonV1beta1().PipelineRuns(pr.Namespace).Get(ctx, prName, metav1.GetOptions{})
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("Failed to fetch PipelineRun `%s` for cancellation: %s", prName, err))
+			continue
+		}
+
+		if err := cancelPipelineRun(ctx, logger, childPR, clientSet); err != nil {
+			errs = append(errs, fmt.Sprintf("Failed to patch PipelineRun `%s` with cancellation: %s", prName, err))
+			continue
+		}
+	}
+
 	return errs
 }
 
-// getChildObjectsFromPRStatus returns taskruns and runs in the PipelineRunStatus's ChildReferences or TaskRuns/Runs,
+// getChildObjectsFromPRStatus returns taskruns and runs in the PipelineRunStatus's ChildReferences or TaskRuns/Runs/PipelineRuns,
 // based on the value of the embedded status flag.
-func getChildObjectsFromPRStatus(ctx context.Context, prs v1beta1.PipelineRunStatus) ([]string, []string, error) {
+func getChildObjectsFromPRStatus(ctx context.Context, prs v1beta1.PipelineRunStatus) ([]string, []string, []string, error) {
 	cfg := config.FromContextOrDefaults(ctx)
 
 	var trNames []string
 	var runNames []string
+	var prNames []string
 	unknownChildKinds := make(map[string]string)
 
 	if cfg.FeatureFlags.EmbeddedStatus != config.FullEmbeddedStatus {
@@ -143,6 +159,8 @@ func getChildObjectsFromPRStatus(ctx context.Context, prs v1beta1.PipelineRunSta
 				trNames = append(trNames, cr.Name)
 			case "Run":
 				runNames = append(runNames, cr.Name)
+			case "PipelineRun":
+				prNames = append(prNames, cr.Name)
 			default:
 				unknownChildKinds[cr.Name] = cr.Kind
 			}
@@ -161,7 +179,7 @@ func getChildObjectsFromPRStatus(ctx context.Context, prs v1beta1.PipelineRunSta
 		err = fmt.Errorf("found child objects of unknown kinds: %v", unknownChildKinds)
 	}
 
-	return trNames, runNames, err
+	return trNames, runNames, prNames, err
 }
 
 // gracefullyCancelPipelineRun marks any non-final resolved TaskRun(s) as cancelled and runs finally.

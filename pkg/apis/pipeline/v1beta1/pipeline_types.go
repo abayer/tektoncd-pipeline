@@ -172,6 +172,14 @@ type PipelineTask struct {
 	// +optional
 	TaskSpec *EmbeddedTask `json:"taskSpec,omitempty"`
 
+	// PipelineRef is a reference to another, nested pipeline.
+	// +optional
+	PipelineRef *PipelineRef `json:"pipelineRef,omitempty"`
+
+	// PipelineSpec is a specification of another, nested pipeline.
+	// +optional
+	PipelineSpec *PipelineSpec `json:"pipelineSpec,omitempty"`
+
 	// Conditions is a list of conditions that need to be true for the task to run
 	// Conditions are deprecated, use WhenExpressions instead
 	// +optional

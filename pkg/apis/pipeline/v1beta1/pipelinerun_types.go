@@ -238,10 +238,14 @@ type PipelineRunSpec struct {
 	// +optional
 	// +listType=atomic
 	Workspaces []WorkspaceBinding `json:"workspaces,omitempty"`
-	// TaskRunSpecs holds a set of runtime specs
+	// TaskRunSpecs holds a set of runtime specs for TaskRuns
 	// +optional
 	// +listType=atomic
 	TaskRunSpecs []PipelineTaskRunSpec `json:"taskRunSpecs,omitempty"`
+	// PipelineRunSpecs holds a set of runtime specs for PipelineRuns
+	// +optional
+	// +listType=atomic
+	PipelineRunSpecs []PipelinePipelineRunSpec `json:"pipelineRunSpecs,omitempty"`
 }
 
 // TimeoutFields allows granular specification of pipeline, task, and finally timeouts
@@ -603,6 +607,13 @@ type PipelineTaskRunSpec struct {
 
 	// +optional
 	Metadata *PipelineTaskMetadata `json:"metadata,omitempty"`
+}
+
+// PipelinePipelineRunSpec can be used to configure specific specs for a concrete Pipeline
+type PipelinePipelineRunSpec struct {
+	PipelineTaskName   string         `json:"pipelineTaskName,omitempty"`
+	ServiceAccountName string         `json:"serviceAccountName,omitempty"`
+	Timeouts           *TimeoutFields `json:"timeouts,omitempty"`
 }
 
 // GetTaskRunSpec returns the task specific spec for a given
