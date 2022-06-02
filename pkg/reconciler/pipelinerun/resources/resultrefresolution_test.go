@@ -120,6 +120,35 @@ var pipelineRunState = PipelineRunState{{
 			Value: *v1beta1.NewArrayOrString("$(tasks.aCustomPipelineTask.results.aResult)"),
 		}},
 	},
+}, {
+	PipelineTask: &v1beta1.PipelineTask{
+		Name:    "cTask",
+		TaskRef: &v1beta1.TaskRef{Name: "cTask"},
+		Params: []v1beta1.Param{{
+			Name:  "cParam",
+			Value: *v1beta1.NewArrayOrString("$(tasks.aChildPipeline.results.cResult)"),
+		}},
+	},
+}, {
+	PipelineTask: &v1beta1.PipelineTask{
+		Name:        "aChildPipeline",
+		PipelineRef: &v1beta1.PipelineRef{APIVersion: "tekton.dev/v1beta1", Name: "aPipeline"},
+	},
+	PipelineRunName: "aChildPipelineRun",
+	PipelineRun: &v1beta1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{Name: "aChildPipelineRun"},
+		Status: v1beta1.PipelineRunStatus{
+			Status: duckv1beta1.Status{
+				Conditions: []apis.Condition{successCondition},
+			},
+			PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+				PipelineResults: []v1beta1.PipelineRunResult{{
+					Name:  "cResult",
+					Value: "cResultValue",
+				}},
+			},
+		},
+	},
 }}
 
 func TestTaskParamResolver_ResolveResultRefs(t *testing.T) {
@@ -535,6 +564,20 @@ func TestResolveResultRefs(t *testing.T) {
 			FromRun: "aRun",
 		}},
 		wantErr: false,
+	}, {
+		name:             "Test successful result references resolution - params - PipelineRun",
+		pipelineRunState: pipelineRunState,
+		targets: PipelineRunState{
+			pipelineRunState[7],
+		},
+		want: ResolvedResultRefs{{
+			Value: *v1beta1.NewArrayOrString("cResultValue"),
+			ResultReference: v1beta1.ResultRef{
+				PipelineTask: "aChildPipeline",
+				Result:       "cResult",
+			},
+			FromPipelineRun: "aChildPipelineRun",
+		}},
 	}} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, pt, err := ResolveResultRefs(tt.pipelineRunState, tt.targets)
@@ -630,6 +673,18 @@ func TestResolveResultRef(t *testing.T) {
 			FromRun: "aRun",
 		}},
 		wantErr: false,
+	}, {
+		name:             "Test successful result references resolution - params - PipelineRun",
+		pipelineRunState: pipelineRunState,
+		target:           pipelineRunState[7],
+		want: ResolvedResultRefs{{
+			Value: *v1beta1.NewArrayOrString("cResultValue"),
+			ResultReference: v1beta1.ResultRef{
+				PipelineTask: "aChildPipeline",
+				Result:       "cResult",
+			},
+			FromPipelineRun: "aChildPipelineRun",
+		}},
 	}} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, pt, err := ResolveResultRef(tt.pipelineRunState, tt.target)
