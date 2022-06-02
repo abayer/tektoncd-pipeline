@@ -568,6 +568,74 @@
         }
       }
     },
+    "v1beta1.EmbeddedPipeline": {
+      "description": "EmbeddedPipeline is used to define a Pipeline within a Pipeline's PipelineTasks.",
+      "type": "object",
+      "properties": {
+        "description": {
+          "description": "Description is a user-facing description of the pipeline that may be used to populate a UI.",
+          "type": "string"
+        },
+        "finally": {
+          "description": "Finally declares the list of Tasks that execute just before leaving the Pipeline i.e. either after all Tasks are finished executing successfully or after a failure which would result in ending the Pipeline",
+          "type": "array",
+          "items": {
+            "default": {},
+            "$ref": "#/definitions/v1beta1.PipelineTask"
+          },
+          "x-kubernetes-list-type": "atomic"
+        },
+        "metadata": {
+          "default": {},
+          "$ref": "#/definitions/v1beta1.PipelineTaskMetadata"
+        },
+        "params": {
+          "description": "Params declares a list of input parameters that must be supplied when this Pipeline is run.",
+          "type": "array",
+          "items": {
+            "default": {},
+            "$ref": "#/definitions/v1beta1.ParamSpec"
+          },
+          "x-kubernetes-list-type": "atomic"
+        },
+        "resources": {
+          "description": "Resources declares the names and types of the resources given to the Pipeline's tasks as inputs and outputs.",
+          "type": "array",
+          "items": {
+            "default": {},
+            "$ref": "#/definitions/v1beta1.PipelineDeclaredResource"
+          },
+          "x-kubernetes-list-type": "atomic"
+        },
+        "results": {
+          "description": "Results are values that this pipeline can output once run",
+          "type": "array",
+          "items": {
+            "default": {},
+            "$ref": "#/definitions/v1beta1.PipelineResult"
+          },
+          "x-kubernetes-list-type": "atomic"
+        },
+        "tasks": {
+          "description": "Tasks declares the graph of Tasks that execute when this Pipeline is run.",
+          "type": "array",
+          "items": {
+            "default": {},
+            "$ref": "#/definitions/v1beta1.PipelineTask"
+          },
+          "x-kubernetes-list-type": "atomic"
+        },
+        "workspaces": {
+          "description": "Workspaces declares a set of named workspaces that are expected to be provided by a PipelineRun.",
+          "type": "array",
+          "items": {
+            "default": {},
+            "$ref": "#/definitions/v1beta1.PipelineWorkspaceDeclaration"
+          },
+          "x-kubernetes-list-type": "atomic"
+        }
+      }
+    },
     "v1beta1.EmbeddedTask": {
       "description": "EmbeddedTask is used to define a Task inline within a Pipeline's PipelineTasks.",
       "type": "object",
@@ -1460,7 +1528,7 @@
         },
         "pipelineSpec": {
           "description": "PipelineSpec is a specification of another, nested pipeline.",
-          "$ref": "#/definitions/v1beta1.PipelineSpec"
+          "$ref": "#/definitions/v1beta1.EmbeddedPipeline"
         },
         "resources": {
           "description": "Resources declares the resources given to this task as inputs and outputs.",

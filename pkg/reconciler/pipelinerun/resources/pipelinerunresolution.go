@@ -570,7 +570,7 @@ func ResolvePipelineRunTask(
 				}
 			}
 		} else {
-			spec = *task.PipelineSpec
+			spec = task.PipelineSpec.PipelineSpec
 		}
 		spec.SetDefaults(ctx)
 		rprt.ResolvedChildPipeline = &ResolvedChildPipeline{

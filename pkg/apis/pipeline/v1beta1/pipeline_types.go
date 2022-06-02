@@ -156,6 +156,14 @@ type EmbeddedTask struct {
 	TaskSpec `json:",inline,omitempty"`
 }
 
+// EmbeddedPipeline is used to define a Pipeline within a Pipeline's PipelineTasks.
+type EmbeddedPipeline struct {
+	PipelineSpec `json:",inline,omitempty"`
+
+	// +optional
+	Metadata PipelineTaskMetadata `json:"metadata,omitempty"`
+}
+
 // PipelineTask defines a task in a Pipeline, passing inputs from both
 // Params and from the output of previous tasks.
 type PipelineTask struct {
@@ -178,7 +186,7 @@ type PipelineTask struct {
 
 	// PipelineSpec is a specification of another, nested pipeline.
 	// +optional
-	PipelineSpec *PipelineSpec `json:"pipelineSpec,omitempty"`
+	PipelineSpec *EmbeddedPipeline `json:"pipelineSpec,omitempty"`
 
 	// Conditions is a list of conditions that need to be true for the task to run
 	// Conditions are deprecated, use WhenExpressions instead
@@ -434,6 +442,11 @@ func (pt *PipelineTask) validateWorkspaces(workspaceNames sets.String) (errs *ap
 // TaskSpecMetadata returns the metadata of the PipelineTask's EmbeddedTask spec.
 func (pt *PipelineTask) TaskSpecMetadata() PipelineTaskMetadata {
 	return pt.TaskSpec.Metadata
+}
+
+// PipelineSpecMetadata returns the metadata of the PipelineTask's PipelineSpec.
+func (pt *PipelineTask) PipelineSpecMetadata() PipelineTaskMetadata {
+	return pt.PipelineSpec.Metadata
 }
 
 // HashKey is the name of the PipelineTask, and is used as the key for this PipelineTask in the DAG

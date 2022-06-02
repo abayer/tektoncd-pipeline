@@ -857,8 +857,8 @@ func (c *Reconciler) createRun(ctx context.Context, rprt *resources.ResolvedPipe
 			Name:            rprt.RunName,
 			Namespace:       pr.Namespace,
 			OwnerReferences: []metav1.OwnerReference{*kmeta.NewControllerRef(pr)},
-			Labels:          getTaskrunLabels(pr, rprt.PipelineTask.Name, true),
-			Annotations:     getTaskrunAnnotations(pr),
+			Labels:          getTaskRunOrPipelineRunLabels(pr, rprt.PipelineTask.Name, true),
+			Annotations:     getTaskRunOrPipelineRunAnnotations(pr),
 		},
 		Spec: v1alpha1.RunSpec{
 			Retries:            rprt.PipelineTask.Retries,
@@ -923,8 +923,8 @@ func (c *Reconciler) createPipelineRun(ctx context.Context, rprt *resources.Reso
 			Name:            rprt.TaskRunName,
 			Namespace:       pr.Namespace,
 			OwnerReferences: []metav1.OwnerReference{*kmeta.NewControllerRef(pr)},
-			Labels:          combineTaskRunAndTaskSpecLabels(pr, rprt.PipelineTask),
-			Annotations:     combineTaskRunAndTaskSpecAnnotations(pr, rprt.PipelineTask),
+			Labels:          combinePipelineRunAndPipelineSpecLabels(pr, rprt.PipelineTask),
+			Annotations:     combinePipelineRunAndPipelineSpecAnnotations(pr, rprt.PipelineTask),
 		},
 		Spec: v1beta1.PipelineRunSpec{
 			Params:             rprt.PipelineTask.Params,
@@ -1032,7 +1032,7 @@ func clearPipelineRunStatus(pr *v1beta1.PipelineRun) {
 	pr.Status.CompletionTime = nil
 }
 
-func getTaskrunAnnotations(pr *v1beta1.PipelineRun) map[string]string {
+func getTaskRunOrPipelineRunAnnotations(pr *v1beta1.PipelineRun) map[string]string {
 	// Propagate annotations from PipelineRun to TaskRun.
 	annotations := make(map[string]string, len(pr.ObjectMeta.Annotations)+1)
 	for key, val := range pr.ObjectMeta.Annotations {
@@ -1058,7 +1058,7 @@ func propagatePipelineNameLabelToPipelineRun(pr *v1beta1.PipelineRun) error {
 	return nil
 }
 
-func getTaskrunLabels(pr *v1beta1.PipelineRun, pipelineTaskName string, includePipelineLabels bool) map[string]string {
+func getTaskRunOrPipelineRunLabels(pr *v1beta1.PipelineRun, pipelineTaskName string, includePipelineLabels bool) map[string]string {
 	// Propagate labels from PipelineRun to TaskRun.
 	labels := make(map[string]string, len(pr.ObjectMeta.Labels)+1)
 	if includePipelineLabels {
@@ -1097,7 +1097,7 @@ func combineTaskRunAndTaskSpecLabels(pr *v1beta1.PipelineRun, pipelineTask *v1be
 		addMetadataByPrecedence(labels, taskRunSpec.Metadata.Labels)
 	}
 
-	addMetadataByPrecedence(labels, getTaskrunLabels(pr, pipelineTask.Name, true))
+	addMetadataByPrecedence(labels, getTaskRunOrPipelineRunLabels(pr, pipelineTask.Name, true))
 
 	if pipelineTask.TaskSpec != nil {
 		addMetadataByPrecedence(labels, pipelineTask.TaskSpecMetadata().Labels)
@@ -1114,10 +1114,44 @@ func combineTaskRunAndTaskSpecAnnotations(pr *v1beta1.PipelineRun, pipelineTask 
 		addMetadataByPrecedence(annotations, taskRunSpec.Metadata.Annotations)
 	}
 
-	addMetadataByPrecedence(annotations, getTaskrunAnnotations(pr))
+	addMetadataByPrecedence(annotations, getTaskRunOrPipelineRunAnnotations(pr))
 
 	if pipelineTask.TaskSpec != nil {
 		addMetadataByPrecedence(annotations, pipelineTask.TaskSpecMetadata().Annotations)
+	}
+
+	return annotations
+}
+
+func combinePipelineRunAndPipelineSpecLabels(pr *v1beta1.PipelineRun, pipelineTask *v1beta1.PipelineTask) map[string]string {
+	labels := make(map[string]string)
+
+	prSpec := pr.GetPipelinePipelineRunSpec(pipelineTask.Name)
+	if prSpec.Metadata != nil {
+		addMetadataByPrecedence(labels, prSpec.Metadata.Labels)
+	}
+
+	addMetadataByPrecedence(labels, getTaskRunOrPipelineRunLabels(pr, pipelineTask.Name, true))
+
+	if pipelineTask.PipelineSpec != nil {
+		addMetadataByPrecedence(labels, pipelineTask.PipelineSpecMetadata().Labels)
+	}
+
+	return labels
+}
+
+func combinePipelineRunAndPipelineSpecAnnotations(pr *v1beta1.PipelineRun, pipelineTask *v1beta1.PipelineTask) map[string]string {
+	annotations := make(map[string]string)
+
+	prSpec := pr.GetPipelinePipelineRunSpec(pipelineTask.Name)
+	if prSpec.Metadata != nil {
+		addMetadataByPrecedence(annotations, prSpec.Metadata.Annotations)
+	}
+
+	addMetadataByPrecedence(annotations, getTaskRunOrPipelineRunAnnotations(pr))
+
+	if pipelineTask.PipelineSpec != nil {
+		addMetadataByPrecedence(annotations, pipelineTask.PipelineSpecMetadata().Annotations)
 	}
 
 	return annotations
@@ -1208,7 +1242,7 @@ func (c *Reconciler) updateLabelsAndAnnotations(ctx context.Context, pr *v1beta1
 }
 
 func (c *Reconciler) makeConditionCheckContainer(ctx context.Context, rprt *resources.ResolvedPipelineRunTask, rcc *resources.ResolvedConditionCheck, pr *v1beta1.PipelineRun) (*v1beta1.ConditionCheck, error) {
-	labels := getTaskrunLabels(pr, rprt.PipelineTask.Name, true)
+	labels := getTaskRunOrPipelineRunLabels(pr, rprt.PipelineTask.Name, true)
 	labels[pipeline.ConditionCheckKey] = rcc.ConditionCheckName
 	labels[pipeline.ConditionNameKey] = rcc.Condition.Name
 
@@ -1217,7 +1251,7 @@ func (c *Reconciler) makeConditionCheckContainer(ctx context.Context, rprt *reso
 	}
 
 	// Propagate annotations from PipelineRun to TaskRun.
-	annotations := getTaskrunAnnotations(pr)
+	annotations := getTaskRunOrPipelineRunAnnotations(pr)
 
 	for key, value := range rcc.Condition.ObjectMeta.Annotations {
 		annotations[key] = value
@@ -1296,7 +1330,7 @@ func (c *Reconciler) updatePipelineRunStatusFromInformer(ctx context.Context, pr
 	// Get the pipelineRun label that is set on each TaskRun.  Do not include the propagated labels from the
 	// Pipeline and PipelineRun.  The user could change them during the lifetime of the PipelineRun so the
 	// current labels may not be set on the previously created TaskRuns.
-	pipelineRunLabels := getTaskrunLabels(pr, "", false)
+	pipelineRunLabels := getTaskRunOrPipelineRunLabels(pr, "", false)
 	taskRuns, err := c.taskRunLister.TaskRuns(pr.Namespace).List(k8slabels.SelectorFromSet(pipelineRunLabels))
 	if err != nil {
 		logger.Errorf("could not list TaskRuns %#v", err)
