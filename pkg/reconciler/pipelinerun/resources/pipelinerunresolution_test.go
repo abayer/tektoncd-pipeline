@@ -2057,6 +2057,10 @@ func TestResolvePipelineRun(t *testing.T) {
 		PipelineTask:    &p.Spec.Tasks[4],
 		PipelineRunName: "pipelinerun-mytask5",
 		PipelineRun:     nil,
+		ResolvedChildPipeline: &ResolvedChildPipeline{
+			PipelineName: childPipeline.Name,
+			PipelineSpec: &childPipeline.Spec,
+		},
 	}}
 
 	if d := cmp.Diff(expectedState, pipelineState, cmpopts.IgnoreUnexported(v1beta1.TaskRunSpec{})); d != "" {
