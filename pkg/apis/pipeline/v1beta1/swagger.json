@@ -821,6 +821,9 @@
       "description": "PipelinePipelineRunSpec can be used to configure specific specs for a concrete Pipeline",
       "type": "object",
       "properties": {
+        "metadata": {
+          "$ref": "#/definitions/v1beta1.PipelineTaskMetadata"
+        },
         "pipelineTaskName": {
           "type": "string"
         },
@@ -1015,6 +1018,29 @@
         "metadata": {
           "default": {},
           "$ref": "#/definitions/v1.ListMeta"
+        }
+      }
+    },
+    "v1beta1.PipelineRunPipelineRunStatus": {
+      "description": "PipelineRunPipelineRunStatus contains the name of the PipelineTask for this PipelineRun and the PipelineRun's Status",
+      "type": "object",
+      "properties": {
+        "pipelineTaskName": {
+          "description": "PipelineTaskName is the name of the PipelineTask.",
+          "type": "string"
+        },
+        "status": {
+          "description": "Status is the PipelineRunStatus for the corresponding PipelineRun",
+          "$ref": "#/definitions/v1beta1.PipelineRunStatus"
+        },
+        "whenExpressions": {
+          "description": "WhenExpressions is the list of checks guarding the execution of the PipelineTask",
+          "type": "array",
+          "items": {
+            "default": {},
+            "$ref": "#/definitions/v1beta1.WhenExpression"
+          },
+          "x-kubernetes-list-type": "atomic"
         }
       }
     },

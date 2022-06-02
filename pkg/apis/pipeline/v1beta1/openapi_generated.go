@@ -58,6 +58,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineRunChildConditionCheckStatus": schema_pkg_apis_pipeline_v1beta1_PipelineRunChildConditionCheckStatus(ref),
 		"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineRunConditionCheckStatus":      schema_pkg_apis_pipeline_v1beta1_PipelineRunConditionCheckStatus(ref),
 		"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineRunList":                      schema_pkg_apis_pipeline_v1beta1_PipelineRunList(ref),
+		"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineRunPipelineRunStatus":         schema_pkg_apis_pipeline_v1beta1_PipelineRunPipelineRunStatus(ref),
 		"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineRunResult":                    schema_pkg_apis_pipeline_v1beta1_PipelineRunResult(ref),
 		"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineRunRunStatus":                 schema_pkg_apis_pipeline_v1beta1_PipelineRunRunStatus(ref),
 		"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineRunSpec":                      schema_pkg_apis_pipeline_v1beta1_PipelineRunSpec(ref),
@@ -1331,11 +1332,16 @@ func schema_pkg_apis_pipeline_v1beta1_PipelinePipelineRunSpec(ref common.Referen
 							Ref: ref("github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.TimeoutFields"),
 						},
 					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineTaskMetadata"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.TimeoutFields"},
+			"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineTaskMetadata", "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.TimeoutFields"},
 	}
 }
 
@@ -1674,6 +1680,53 @@ func schema_pkg_apis_pipeline_v1beta1_PipelineRunList(ref common.ReferenceCallba
 		},
 		Dependencies: []string{
 			"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineRun", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_pipeline_v1beta1_PipelineRunPipelineRunStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PipelineRunPipelineRunStatus contains the name of the PipelineTask for this PipelineRun and the PipelineRun's Status",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"pipelineTaskName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PipelineTaskName is the name of the PipelineTask.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status is the PipelineRunStatus for the corresponding PipelineRun",
+							Ref:         ref("github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineRunStatus"),
+						},
+					},
+					"whenExpressions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "WhenExpressions is the list of checks guarding the execution of the PipelineTask",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.WhenExpression"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineRunStatus", "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.WhenExpression"},
 	}
 }
 
