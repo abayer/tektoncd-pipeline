@@ -240,7 +240,7 @@ func TestUpdatePipelineRunStatusFromTaskRuns(t *testing.T) {
 		},
 	}
 
-	allTaskRuns, taskRunsFromAnotherPR, taskRunsWithNoOwner, _, _, _ := getTestTaskRunsAndRuns(t)
+	allTaskRuns, taskRunsFromAnotherPR, taskRunsWithNoOwner, _, _, _, _, _, _ := getTestTaskRunsRunsAndChildPRs(t)
 
 	tcs := []struct {
 		prName           string
@@ -420,7 +420,7 @@ func TestUpdatePipelineRunStatusFromRuns(t *testing.T) {
 		},
 	}
 
-	_, _, _, allRuns, runsFromAnotherPR, runsWithNoOwner := getTestTaskRunsAndRuns(t)
+	_, _, _, allRuns, runsFromAnotherPR, runsWithNoOwner, _, _, _ := getTestTaskRunsRunsAndChildPRs(t)
 
 	tcs := []struct {
 		prName           string
@@ -504,9 +504,11 @@ type updateStatusChildRefsData struct {
 	missingTaskRun []v1beta1.ChildStatusReference
 	foundTaskRun   []v1beta1.ChildStatusReference
 	missingRun     []v1beta1.ChildStatusReference
+	missingChildPR []v1beta1.ChildStatusReference
 	recovered      []v1beta1.ChildStatusReference
 	simple         []v1beta1.ChildStatusReference
 	simpleRun      []v1beta1.ChildStatusReference
+	simpleChildPR  []v1beta1.ChildStatusReference
 }
 
 func getUpdateStatusChildRefsData(t *testing.T) updateStatusChildRefsData {
@@ -574,6 +576,13 @@ name: pr-run-6-xxyyy
 pipelineTaskName: task-6
 `
 
+	prTask7Yaml := `
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+name: pr-task-7-xxyyy
+pipelineTaskName: task-7
+`
+
 	prTask3NoStatusYaml := `
 apiVersion: tekton.dev/v1beta1
 conditionChecks:
@@ -610,6 +619,7 @@ pipelineTaskName: task-4
 		mustParseChildStatusReference(t, prTask3Yaml),
 		mustParseChildStatusReference(t, prTask4Yaml),
 		mustParseChildStatusReference(t, prTask6Yaml),
+		mustParseChildStatusReference(t, prTask7Yaml),
 	}
 
 	missingTaskRun := []v1beta1.ChildStatusReference{
@@ -617,6 +627,7 @@ pipelineTaskName: task-4
 		mustParseChildStatusReference(t, prTask2Yaml),
 		mustParseChildStatusReference(t, prTask4Yaml),
 		mustParseChildStatusReference(t, prTask6Yaml),
+		mustParseChildStatusReference(t, prTask7Yaml),
 	}
 
 	foundTaskRun := []v1beta1.ChildStatusReference{
@@ -625,6 +636,7 @@ pipelineTaskName: task-4
 		mustParseChildStatusReference(t, prTask3NoStatusYaml),
 		mustParseChildStatusReference(t, prTask4Yaml),
 		mustParseChildStatusReference(t, prTask6Yaml),
+		mustParseChildStatusReference(t, prTask7Yaml),
 	}
 
 	missingRun := []v1beta1.ChildStatusReference{
@@ -632,6 +644,15 @@ pipelineTaskName: task-4
 		mustParseChildStatusReference(t, prTask2Yaml),
 		mustParseChildStatusReference(t, prTask3Yaml),
 		mustParseChildStatusReference(t, prTask4Yaml),
+		mustParseChildStatusReference(t, prTask7Yaml),
+	}
+
+	missingChildPR := []v1beta1.ChildStatusReference{
+		mustParseChildStatusReference(t, prTask1Yaml),
+		mustParseChildStatusReference(t, prTask2Yaml),
+		mustParseChildStatusReference(t, prTask3Yaml),
+		mustParseChildStatusReference(t, prTask4Yaml),
+		mustParseChildStatusReference(t, prTask6Yaml),
 	}
 
 	recovered := []v1beta1.ChildStatusReference{
@@ -640,20 +661,25 @@ pipelineTaskName: task-4
 		mustParseChildStatusReference(t, prTask3NoStatusYaml),
 		mustParseChildStatusReference(t, orphanedPRTask4Yaml),
 		mustParseChildStatusReference(t, prTask6Yaml),
+		mustParseChildStatusReference(t, prTask7Yaml),
 	}
 
 	simple := []v1beta1.ChildStatusReference{mustParseChildStatusReference(t, prTask1Yaml)}
 
 	simpleRun := []v1beta1.ChildStatusReference{mustParseChildStatusReference(t, prTask6Yaml)}
 
+	simpleChildPR := []v1beta1.ChildStatusReference{mustParseChildStatusReference(t, prTask7Yaml)}
+
 	return updateStatusChildRefsData{
 		withConditions: withConditions,
 		missingTaskRun: missingTaskRun,
 		foundTaskRun:   foundTaskRun,
 		missingRun:     missingRun,
+		missingChildPR: missingChildPR,
 		recovered:      recovered,
 		simple:         simple,
 		simpleRun:      simpleRun,
+		simpleChildPR:  simpleChildPR,
 	}
 }
 
@@ -698,6 +724,13 @@ func TestUpdatePipelineRunStatusFromChildRefs(t *testing.T) {
 		Status: prRunningStatus,
 		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
 			ChildReferences: childRefsPRStatusData.missingRun,
+		},
+	}
+
+	prStatusMissingChildPR := v1beta1.PipelineRunStatus{
+		Status: prRunningStatus,
+		PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
+			ChildReferences: childRefsPRStatusData.missingChildPR,
 		},
 	}
 
@@ -748,7 +781,7 @@ func TestUpdatePipelineRunStatusFromChildRefs(t *testing.T) {
 		},
 	}
 
-	allTaskRuns, taskRunsFromAnotherPR, taskRunsWithNoOwner, _, runsFromAnotherPR, runsWithNoOwner := getTestTaskRunsAndRuns(t)
+	allTaskRuns, taskRunsFromAnotherPR, taskRunsWithNoOwner, _, runsFromAnotherPR, runsWithNoOwner, _, childPRsFromAnotherPR, childPRsWithNoOwner := getTestTaskRunsRunsAndChildPRs(t)
 
 	singleRun := []*v1alpha1.Run{parse.MustParseRun(t, `
 metadata:
@@ -759,11 +792,22 @@ metadata:
   - uid: 11111111-1111-1111-1111-111111111111
 `)}
 
+	singleChildPR := []*v1beta1.PipelineRun{parse.MustParsePipelineRun(t, `
+metadata:
+  labels:
+    tekton.dev/pipelineTask: task-7
+  name: pr-task-7-xxyyy
+  ownerReferences:
+  - uid: 11111111-1111-1111-1111-111111111111
+`)}
+
 	tcs := []struct {
 		prName           string
 		prStatus         v1beta1.PipelineRunStatus
+		justPipelineRuns bool
 		trs              []*v1beta1.TaskRun
 		runs             []*v1alpha1.Run
+		childPRs         []*v1beta1.PipelineRun
 		expectedPrStatus v1beta1.PipelineRunStatus
 	}{
 		{
@@ -825,6 +869,11 @@ metadata:
 			runs:             singleRun,
 			expectedPrStatus: prStatusWithCondition,
 		}, {
+			prName:           "status-missing-child-prs",
+			prStatus:         prStatusMissingChildPR,
+			childPRs:         singleChildPR,
+			expectedPrStatus: prStatusWithCondition,
+		}, {
 			prName:           "status-matching-taskruns-pr",
 			prStatus:         prStatusWithCondition,
 			trs:              allTaskRuns,
@@ -834,18 +883,21 @@ metadata:
 			prStatus:         prStatusWithOrphans,
 			trs:              allTaskRuns,
 			runs:             singleRun,
+			childPRs:         singleChildPR,
 			expectedPrStatus: prStatusRecovered,
 		}, {
-			prName:           "tr-and-run-from-another-pr",
+			prName:           "tr-run-and-child-pr-from-another-pr",
 			prStatus:         prStatusWithEmptyChildRefs,
 			trs:              taskRunsFromAnotherPR,
 			runs:             runsFromAnotherPR,
+			childPRs:         childPRsFromAnotherPR,
 			expectedPrStatus: prStatusWithEmptyChildRefs,
 		}, {
-			prName:           "tr-and-run-with-no-owner",
+			prName:           "tr-run-and-child-pr-with-no-owner",
 			prStatus:         prStatusWithEmptyChildRefs,
 			trs:              taskRunsWithNoOwner,
 			runs:             runsWithNoOwner,
+			childPRs:         childPRsWithNoOwner,
 			expectedPrStatus: prStatusWithEmptyChildRefs,
 		},
 	}
@@ -859,7 +911,7 @@ metadata:
 				Status:     tc.prStatus,
 			}
 
-			updatePipelineRunStatusFromChildRefs(logger, pr, tc.trs, tc.runs)
+			updatePipelineRunStatusFromChildRefs(logger, pr, tc.trs, tc.runs, tc.childPRs, tc.justPipelineRuns)
 
 			actualPrStatus := pr.Status
 
@@ -924,7 +976,7 @@ func TestUpdatePipelineRunStatusFromChildObjects(t *testing.T) {
 		}
 	}
 
-	allTaskRuns, _, _, _, _, _ := getTestTaskRunsAndRuns(t)
+	allTaskRuns, _, _, _, _, _, _, _, _ := getTestTaskRunsRunsAndChildPRs(t)
 
 	singleRun := []*v1alpha1.Run{parse.MustParseRun(t, `
 metadata:
@@ -935,11 +987,21 @@ metadata:
   - uid: 11111111-1111-1111-1111-111111111111
 `)}
 
+	singleChildPR := []*v1beta1.PipelineRun{parse.MustParsePipelineRun(t, `
+metadata:
+  labels:
+    tekton.dev/pipelineTask: task-7
+  name: pr-task-7-xxyyy
+  ownerReferences:
+  - uid: 11111111-1111-1111-1111-111111111111
+`)}
+
 	tcs := []struct {
 		prName             string
 		prStatus           func() v1beta1.PipelineRunStatus
 		trs                []*v1beta1.TaskRun
 		runs               []*v1alpha1.Run
+		childPRs           []*v1beta1.PipelineRun
 		expectedStatusTRs  map[string]*v1beta1.PipelineRunTaskRunStatus
 		expectedStatusRuns map[string]*v1beta1.PipelineRunRunStatus
 		expectedStatusCRs  []v1beta1.ChildStatusReference
@@ -969,10 +1031,16 @@ metadata:
 				},
 			},
 		}, {
+			prName:            "status-nil-child-runs",
+			prStatus:          prStatusWithEmptyEverything,
+			childPRs:          singleChildPR,
+			expectedStatusCRs: childRefsPRStatusData.simpleChildPR,
+		}, {
 			prName:            "orphaned-taskruns-pr",
 			prStatus:          func() v1beta1.PipelineRunStatus { return prStatusWithOrphans },
 			trs:               allTaskRuns,
 			runs:              singleRun,
+			childPRs:          singleChildPR,
 			expectedStatusTRs: taskRunsPRStatusData.recovered,
 			expectedStatusCRs: childRefsPRStatusData.recovered,
 			expectedStatusRuns: map[string]*v1beta1.PipelineRunRunStatus{
@@ -1003,7 +1071,7 @@ metadata:
 					Status:     tc.prStatus(),
 				}
 
-				if err := updatePipelineRunStatusFromChildObjects(ctx, logger, pr, tc.trs, tc.runs); err != nil {
+				if err := updatePipelineRunStatusFromChildObjects(ctx, logger, pr, tc.trs, tc.runs, tc.childPRs); err != nil {
 					t.Fatalf("received an unexpected error: %v", err)
 				}
 
@@ -1277,6 +1345,14 @@ func prStatusFromInputs(embeddedStatus string, status duckv1beta1.Status, taskRu
 			runStatus := *v
 			prs.Runs[k] = &runStatus
 		}
+		// Populate PipelineRuns in ChildReferences if this isn't minimal or both.
+		if !shouldHaveMinimalEmbeddedStatus(embeddedStatus) {
+			for _, child := range childRefs {
+				if child.Kind == "PipelineRun" {
+					prs.ChildReferences = append(prs.ChildReferences, child)
+				}
+			}
+		}
 	}
 	if shouldHaveMinimalEmbeddedStatus(embeddedStatus) {
 		prs.ChildReferences = append(prs.ChildReferences, childRefs...)
@@ -1289,7 +1365,7 @@ func prStatusFromInputs(embeddedStatus string, status duckv1beta1.Status, taskRu
 	return prs
 }
 
-func getTestTaskRunsAndRuns(t *testing.T) ([]*v1beta1.TaskRun, []*v1beta1.TaskRun, []*v1beta1.TaskRun, []*v1alpha1.Run, []*v1alpha1.Run, []*v1alpha1.Run) {
+func getTestTaskRunsRunsAndChildPRs(t *testing.T) ([]*v1beta1.TaskRun, []*v1beta1.TaskRun, []*v1beta1.TaskRun, []*v1alpha1.Run, []*v1alpha1.Run, []*v1alpha1.Run, []*v1beta1.PipelineRun, []*v1beta1.PipelineRun, []*v1beta1.PipelineRun) {
 	allTaskRuns := []*v1beta1.TaskRun{
 		parse.MustParseTaskRun(t, `
 metadata:
@@ -1398,7 +1474,50 @@ metadata:
   name: pr-run-1-xxyyy
 `)}
 
-	return allTaskRuns, taskRunsFromAnotherPR, taskRunsWithNoOwner, allRuns, runsFromAnotherPR, runsWithNoOwner
+	allChildPRs := []*v1beta1.PipelineRun{
+		parse.MustParsePipelineRun(t, `
+metadata:
+  labels:
+    tekton.dev/pipelineTask: child-pr-1
+  name: pr-child-pr-1-xxyyy
+  ownerReferences:
+  - uid: 11111111-1111-1111-1111-111111111111
+`),
+		parse.MustParsePipelineRun(t, `
+metadata:
+  labels:
+    tekton.dev/pipelineTask: child-pr-2
+  name: pr-child-pr-2-xxyyy
+  ownerReferences:
+  - uid: 11111111-1111-1111-1111-111111111111
+`),
+		parse.MustParsePipelineRun(t, `
+metadata:
+  labels:
+    tekton.dev/pipelineTask: child-pr-3
+  name: pr-child-pr-3-xxyyy
+  ownerReferences:
+  - uid: 11111111-1111-1111-1111-111111111111
+`),
+	}
+
+	childPRsFromAnotherPR := []*v1beta1.PipelineRun{parse.MustParsePipelineRun(t, `
+metadata:
+  labels:
+    tekton.dev/pipelineTask: child-pr-1
+  name: pr-child-pr-1-xxyyy
+  ownerReferences:
+  - uid: 22222222-2222-2222-2222-222222222222
+`)}
+
+	childPRsWithNoOwner := []*v1beta1.PipelineRun{parse.MustParsePipelineRun(t, `
+metadata:
+  labels:
+    tekton.dev/pipelineTask: child-pr-1
+  name: child-pr-run-1-xxyyy
+`)}
+
+	return allTaskRuns, taskRunsFromAnotherPR, taskRunsWithNoOwner, allRuns, runsFromAnotherPR, runsWithNoOwner, allChildPRs, childPRsFromAnotherPR, childPRsWithNoOwner
 }
 
 func mustParsePipelineRunTaskRunStatus(t *testing.T, yamlStr string) *v1beta1.PipelineRunTaskRunStatus {
