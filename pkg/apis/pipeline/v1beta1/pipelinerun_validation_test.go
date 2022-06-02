@@ -375,6 +375,41 @@ func TestPipelineRun_Validate(t *testing.T) {
 			},
 		},
 		wc: enableAlphaAPIFields,
+	}, {
+		name: "alpha feature: pipeline run specs",
+		pr: v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pr",
+			},
+			Spec: v1beta1.PipelineRunSpec{
+				PipelineRef: &v1beta1.PipelineRef{Name: "pr"},
+				PipelineRunSpecs: []v1beta1.PipelinePipelineRunSpec{{
+					TaskRunSpecs: []v1beta1.PipelineTaskRunSpec{
+						{
+							PipelineTaskName: "bar",
+							StepOverrides: []v1beta1.TaskRunStepOverride{{
+								Name: "task-1",
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{corev1.ResourceMemory: corev1resources.MustParse("1Gi")},
+								}},
+							},
+							SidecarOverrides: []v1beta1.TaskRunSidecarOverride{{
+								Name: "task-1",
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{corev1.ResourceMemory: corev1resources.MustParse("1Gi")},
+								}},
+							},
+						},
+					},
+					Timeouts: &v1beta1.TimeoutFields{
+						Pipeline: &metav1.Duration{Duration: 1 * time.Hour},
+						Tasks:    &metav1.Duration{Duration: 30 * time.Minute},
+						Finally:  &metav1.Duration{Duration: 30 * time.Minute},
+					},
+				}},
+			},
+		},
+		wc: enableAlphaAPIFields,
 	}}
 
 	for _, ts := range tests {
@@ -609,6 +644,42 @@ func TestPipelineRunSpec_Invalidate(t *testing.T) {
 			},
 		},
 		wantErr:     apis.ErrMissingField("taskRunSpecs[0].sidecarOverrides[0].name"),
+		withContext: enableAlphaAPIFields,
+	}, {
+		name: "pipelineRunSpecs disallowed without alpha feature gate",
+		spec: v1beta1.PipelineRunSpec{
+			PipelineRef: &v1beta1.PipelineRef{Name: "foo"},
+			PipelineRunSpecs: []v1beta1.PipelinePipelineRunSpec{{
+				TaskRunSpecs: []v1beta1.PipelineTaskRunSpec{
+					{
+						PipelineTaskName: "bar",
+						SidecarOverrides: []v1beta1.TaskRunSidecarOverride{{
+							Name: "task-1",
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{corev1.ResourceMemory: corev1resources.MustParse("1Gi")},
+							}},
+						},
+					},
+				},
+			}},
+		},
+		wantErr: apis.ErrDisallowedFields("pipelineRunSpecs"),
+	}, {
+		name: "validation failure within pipelineRunSpecs",
+		spec: v1beta1.PipelineRunSpec{
+			PipelineRef: &v1beta1.PipelineRef{Name: "foo"},
+			PipelineRunSpecs: []v1beta1.PipelinePipelineRunSpec{{
+				TaskRunSpecs: []v1beta1.PipelineTaskRunSpec{
+					{
+						PipelineTaskName: "bar",
+						SidecarOverrides: []v1beta1.TaskRunSidecarOverride{
+							{Name: "baz"}, {Name: "baz"},
+						},
+					},
+				},
+			}},
+		},
+		wantErr:     apis.ErrMultipleOneOf("pipelineRunSpecs[0].taskRunSpecs[0].sidecarOverrides[1].name"),
 		withContext: enableAlphaAPIFields,
 	}}
 	for _, ps := range tests {

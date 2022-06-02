@@ -930,6 +930,7 @@ func (c *Reconciler) createPipelineRun(ctx context.Context, rprt *resources.Reso
 			Params:             rprt.PipelineTask.Params,
 			ServiceAccountName: prSpec.ServiceAccountName,
 			Timeout:            getTimeoutFunc(ctx, pr, rprt, c.Clock),
+			TaskRunSpecs:       prSpec.TaskRunSpecs,
 		}}
 
 	if rprt.ResolvedChildPipeline.PipelineName != "" {

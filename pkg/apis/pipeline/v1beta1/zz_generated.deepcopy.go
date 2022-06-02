@@ -457,6 +457,13 @@ func (in *PipelinePipelineRunSpec) DeepCopyInto(out *PipelinePipelineRunSpec) {
 		*out = new(TimeoutFields)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.TaskRunSpecs != nil {
+		in, out := &in.TaskRunSpecs, &out.TaskRunSpecs
+		*out = make([]PipelineTaskRunSpec, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Metadata != nil {
 		in, out := &in.Metadata, &out.Metadata
 		*out = new(PipelineTaskMetadata)

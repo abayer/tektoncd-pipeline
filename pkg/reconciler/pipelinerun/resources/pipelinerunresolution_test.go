@@ -3167,6 +3167,149 @@ func TestValidateTaskRunSpecs(t *testing.T) {
 	}
 }
 
+func TestValidatePipelineRunSpecs(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		p       *v1beta1.Pipeline
+		run     *v1beta1.PipelineRun
+		wantErr bool
+	}{{
+		name: "valid task mapping",
+		p: &v1beta1.Pipeline{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pipelines",
+			},
+			Spec: v1beta1.PipelineSpec{
+				Tasks: []v1beta1.PipelineTask{{
+					Name: "mytask1",
+					TaskRef: &v1beta1.TaskRef{
+						Name: "task",
+					},
+					Resources: &v1beta1.PipelineTaskResources{
+						Inputs: []v1beta1.PipelineTaskInputResource{{
+							Name:     "input1",
+							Resource: "git-resource",
+						}},
+					},
+				}},
+			},
+		},
+		run: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pipelinerun",
+			},
+			Spec: v1beta1.PipelineRunSpec{
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "pipeline",
+				},
+				TaskRunSpecs: []v1beta1.PipelineTaskRunSpec{{
+					PipelineTaskName:       "mytask1",
+					TaskServiceAccountName: "default",
+				}},
+			},
+		},
+		wantErr: false,
+	}, {
+		name: "valid finally task mapping",
+		p: &v1beta1.Pipeline{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pipelines",
+			},
+			Spec: v1beta1.PipelineSpec{
+				Tasks: []v1beta1.PipelineTask{{
+					Name: "mytask1",
+					TaskRef: &v1beta1.TaskRef{
+						Name: "task",
+					},
+					Resources: &v1beta1.PipelineTaskResources{
+						Inputs: []v1beta1.PipelineTaskInputResource{{
+							Name:     "input1",
+							Resource: "git-resource",
+						}},
+					},
+				}},
+				Finally: []v1beta1.PipelineTask{{
+					Name: "myfinaltask1",
+					TaskRef: &v1beta1.TaskRef{
+						Name: "finaltask",
+					},
+				}},
+			},
+		},
+		run: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pipelinerun",
+			},
+			Spec: v1beta1.PipelineRunSpec{
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "pipeline",
+				},
+				TaskRunSpecs: []v1beta1.PipelineTaskRunSpec{{
+					PipelineTaskName:       "myfinaltask1",
+					TaskServiceAccountName: "default",
+				}},
+			},
+		},
+		wantErr: false,
+	}, {
+		name: "invalid task mapping",
+		p: &v1beta1.Pipeline{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pipelines",
+			},
+			Spec: v1beta1.PipelineSpec{
+				Tasks: []v1beta1.PipelineTask{{
+					Name: "mytask1",
+					TaskRef: &v1beta1.TaskRef{
+						Name: "task",
+					},
+					Resources: &v1beta1.PipelineTaskResources{
+						Inputs: []v1beta1.PipelineTaskInputResource{{
+							Name:     "input1",
+							Resource: "git-resource",
+						}},
+					},
+				}},
+				Finally: []v1beta1.PipelineTask{{
+					Name: "myfinaltask1",
+					TaskRef: &v1beta1.TaskRef{
+						Name: "finaltask",
+					},
+				}},
+			},
+		},
+		run: &v1beta1.PipelineRun{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pipelinerun",
+			},
+			Spec: v1beta1.PipelineRunSpec{
+				PipelineRef: &v1beta1.PipelineRef{
+					Name: "pipeline",
+				},
+				TaskRunSpecs: []v1beta1.PipelineTaskRunSpec{{
+					PipelineTaskName:       "wrongtask",
+					TaskServiceAccountName: "default",
+				}},
+			},
+		},
+		wantErr: true,
+	}} {
+		t.Run(tc.name, func(t *testing.T) {
+			spec := tc.p.Spec
+			err := ValidateTaskRunSpecs(&spec, tc.run)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("Did not get error when it was expected for test: %s", tc.name)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Unexpected error when no error expected: %v", err)
+				}
+			}
+		})
+	}
+}
+
 func TestValidateServiceaccountMapping(t *testing.T) {
 	for _, tc := range []struct {
 		name    string

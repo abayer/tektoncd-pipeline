@@ -47,6 +47,8 @@ func (pr *PipelineRun) Validate(ctx context.Context) *apis.FieldError {
 
 // Validate pipelinerun spec
 func (ps *PipelineRunSpec) Validate(ctx context.Context) (errs *apis.FieldError) {
+	cfg := config.FromContextOrDefaults(ctx)
+
 	// Must have exactly one of pipelineRef and pipelineSpec.
 	if ps.PipelineRef == nil && ps.PipelineSpec == nil {
 		errs = errs.Also(apis.ErrMissingOneOf("pipelineRef", "pipelineSpec"))
@@ -79,22 +81,7 @@ func (ps *PipelineRunSpec) Validate(ctx context.Context) (errs *apis.FieldError)
 			// can't have both at the same time
 			errs = errs.Also(apis.ErrDisallowedFields("timeout", "timeouts"))
 		}
-
-		// tasks timeout should be a valid duration of at least 0.
-		errs = errs.Also(validateTimeoutDuration("tasks", ps.Timeouts.Tasks))
-
-		// finally timeout should be a valid duration of at least 0.
-		errs = errs.Also(validateTimeoutDuration("finally", ps.Timeouts.Finally))
-
-		// pipeline timeout should be a valid duration of at least 0.
-		errs = errs.Also(validateTimeoutDuration("pipeline", ps.Timeouts.Pipeline))
-
-		if ps.Timeouts.Pipeline != nil {
-			errs = errs.Also(ps.validatePipelineTimeout(ps.Timeouts.Pipeline.Duration, "should be <= pipeline duration"))
-		} else {
-			defaultTimeout := time.Duration(config.FromContextOrDefaults(ctx).Defaults.DefaultTimeoutMinutes)
-			errs = errs.Also(ps.validatePipelineTimeout(defaultTimeout, "should be <= default timeout duration"))
-		}
+		errs = errs.Also(validateTimeoutFields(ctx, ps.Timeouts))
 	}
 
 	errs = errs.Also(validateSpecStatus(ctx, ps.Status))
@@ -112,6 +99,16 @@ func (ps *PipelineRunSpec) Validate(ctx context.Context) (errs *apis.FieldError)
 
 	for idx, trs := range ps.TaskRunSpecs {
 		errs = errs.Also(validateTaskRunSpec(ctx, trs).ViaIndex(idx).ViaField("taskRunSpecs"))
+	}
+
+	if len(ps.PipelineRunSpecs) > 0 {
+		if cfg.FeatureFlags.EnableAPIFields == config.AlphaAPIFields {
+			for idx, prs := range ps.PipelineRunSpecs {
+				errs = errs.Also(validatePipelineRunSpec(ctx, prs).ViaIndex(idx).ViaField("pipelineRunSpecs"))
+			}
+		} else {
+			errs = errs.Also(apis.ErrDisallowedFields("pipelineRunSpecs"))
+		}
 	}
 
 	return errs
@@ -146,14 +143,14 @@ func validateTimeoutDuration(field string, d *metav1.Duration) (errs *apis.Field
 	return nil
 }
 
-func (ps *PipelineRunSpec) validatePipelineTimeout(timeout time.Duration, errorMsg string) (errs *apis.FieldError) {
-	if ps.Timeouts.Tasks != nil {
+func validatePipelineTimeout(timeoutFields *TimeoutFields, timeout time.Duration, errorMsg string) (errs *apis.FieldError) {
+	if timeoutFields.Tasks != nil {
 		tasksTimeoutErr := false
-		tasksTimeoutStr := ps.Timeouts.Tasks.Duration.String()
-		if ps.Timeouts.Tasks.Duration > timeout {
+		tasksTimeoutStr := timeoutFields.Tasks.Duration.String()
+		if timeoutFields.Tasks.Duration > timeout {
 			tasksTimeoutErr = true
 		}
-		if ps.Timeouts.Tasks.Duration == apisconfig.NoTimeoutDuration && timeout != apisconfig.NoTimeoutDuration {
+		if timeoutFields.Tasks.Duration == apisconfig.NoTimeoutDuration && timeout != apisconfig.NoTimeoutDuration {
 			tasksTimeoutErr = true
 			tasksTimeoutStr += " (no timeout)"
 		}
@@ -162,13 +159,13 @@ func (ps *PipelineRunSpec) validatePipelineTimeout(timeout time.Duration, errorM
 		}
 	}
 
-	if ps.Timeouts.Finally != nil {
+	if timeoutFields.Finally != nil {
 		finallyTimeoutErr := false
-		finallyTimeoutStr := ps.Timeouts.Finally.Duration.String()
-		if ps.Timeouts.Finally.Duration > timeout {
+		finallyTimeoutStr := timeoutFields.Finally.Duration.String()
+		if timeoutFields.Finally.Duration > timeout {
 			finallyTimeoutErr = true
 		}
-		if ps.Timeouts.Finally.Duration == apisconfig.NoTimeoutDuration && timeout != apisconfig.NoTimeoutDuration {
+		if timeoutFields.Finally.Duration == apisconfig.NoTimeoutDuration && timeout != apisconfig.NoTimeoutDuration {
 			finallyTimeoutErr = true
 			finallyTimeoutStr += " (no timeout)"
 		}
@@ -177,10 +174,10 @@ func (ps *PipelineRunSpec) validatePipelineTimeout(timeout time.Duration, errorM
 		}
 	}
 
-	if ps.Timeouts.Tasks != nil && ps.Timeouts.Finally != nil {
-		if ps.Timeouts.Tasks.Duration+ps.Timeouts.Finally.Duration > timeout {
-			errs = errs.Also(apis.ErrInvalidValue(fmt.Sprintf("%s + %s %s", ps.Timeouts.Tasks.Duration.String(), ps.Timeouts.Finally.Duration.String(), errorMsg), "timeouts.tasks"))
-			errs = errs.Also(apis.ErrInvalidValue(fmt.Sprintf("%s + %s %s", ps.Timeouts.Tasks.Duration.String(), ps.Timeouts.Finally.Duration.String(), errorMsg), "timeouts.finally"))
+	if timeoutFields.Tasks != nil && timeoutFields.Finally != nil {
+		if timeoutFields.Tasks.Duration+timeoutFields.Finally.Duration > timeout {
+			errs = errs.Also(apis.ErrInvalidValue(fmt.Sprintf("%s + %s %s", timeoutFields.Tasks.Duration.String(), timeoutFields.Finally.Duration.String(), errorMsg), "timeouts.tasks"))
+			errs = errs.Also(apis.ErrInvalidValue(fmt.Sprintf("%s + %s %s", timeoutFields.Tasks.Duration.String(), timeoutFields.Finally.Duration.String(), errorMsg), "timeouts.finally"))
 		}
 	}
 	return errs
@@ -203,5 +200,39 @@ func validateTaskRunSpec(ctx context.Context, trs PipelineTaskRunSpec) (errs *ap
 			errs = errs.Also(apis.ErrDisallowedFields("sidecarOverrides"))
 		}
 	}
+	return errs
+}
+
+func validateTimeoutFields(ctx context.Context, timeoutFields *TimeoutFields) (errs *apis.FieldError) {
+	// tasks timeout should be a valid duration of at least 0.
+	errs = errs.Also(validateTimeoutDuration("tasks", timeoutFields.Tasks))
+
+	// finally timeout should be a valid duration of at least 0.
+	errs = errs.Also(validateTimeoutDuration("finally", timeoutFields.Finally))
+
+	// pipeline timeout should be a valid duration of at least 0.
+	errs = errs.Also(validateTimeoutDuration("pipeline", timeoutFields.Pipeline))
+
+	if timeoutFields.Pipeline != nil {
+		errs = errs.Also(validatePipelineTimeout(timeoutFields, timeoutFields.Pipeline.Duration, "should be <= pipeline duration"))
+	} else {
+		defaultTimeout := time.Duration(config.FromContextOrDefaults(ctx).Defaults.DefaultTimeoutMinutes)
+		errs = errs.Also(validatePipelineTimeout(timeoutFields, defaultTimeout, "should be <= default timeout duration"))
+	}
+
+	return errs
+}
+
+func validatePipelineRunSpec(ctx context.Context, prs PipelinePipelineRunSpec) (errs *apis.FieldError) {
+	// This is an alpha feature and will fail validation if it's used in a pipelinerun spec
+	// when the enable-api-fields feature gate is anything but "alpha".
+	if prs.Timeouts != nil {
+		errs = errs.Also(validateTimeoutFields(ctx, prs.Timeouts))
+	}
+
+	for idx, trs := range prs.TaskRunSpecs {
+		errs = errs.Also(validateTaskRunSpec(ctx, trs).ViaIndex(idx).ViaField("taskRunSpecs"))
+	}
+
 	return errs
 }

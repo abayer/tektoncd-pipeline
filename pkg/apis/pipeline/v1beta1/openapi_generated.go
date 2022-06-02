@@ -1475,6 +1475,19 @@ func schema_pkg_apis_pipeline_v1beta1_PipelinePipelineRunSpec(ref common.Referen
 							Ref: ref("github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.TimeoutFields"),
 						},
 					},
+					"taskRunSpecs": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineTaskRunSpec"),
+									},
+								},
+							},
+						},
+					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineTaskMetadata"),
@@ -1484,7 +1497,7 @@ func schema_pkg_apis_pipeline_v1beta1_PipelinePipelineRunSpec(ref common.Referen
 			},
 		},
 		Dependencies: []string{
-			"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineTaskMetadata", "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.TimeoutFields"},
+			"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineTaskMetadata", "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.PipelineTaskRunSpec", "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.TimeoutFields"},
 	}
 }
 

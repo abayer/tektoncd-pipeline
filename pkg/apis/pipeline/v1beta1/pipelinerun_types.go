@@ -629,9 +629,10 @@ type PipelineTaskRunSpec struct {
 
 // PipelinePipelineRunSpec can be used to configure specific specs for a concrete Pipeline
 type PipelinePipelineRunSpec struct {
-	PipelineTaskName   string         `json:"pipelineTaskName,omitempty"`
-	ServiceAccountName string         `json:"serviceAccountName,omitempty"`
-	Timeouts           *TimeoutFields `json:"timeouts,omitempty"`
+	PipelineTaskName   string                `json:"pipelineTaskName,omitempty"`
+	ServiceAccountName string                `json:"serviceAccountName,omitempty"`
+	Timeouts           *TimeoutFields        `json:"timeouts,omitempty"`
+	TaskRunSpecs       []PipelineTaskRunSpec `json:"taskRunSpecs,omitempty"`
 
 	// +optional
 	Metadata *PipelineTaskMetadata `json:"metadata,omitempty"`
@@ -668,6 +669,7 @@ func (pr *PipelineRun) GetPipelinePipelineRunSpec(pipelineTaskName string) Pipel
 		PipelineTaskName:   pipelineTaskName,
 		ServiceAccountName: pr.GetServiceAccountName(pipelineTaskName),
 		Timeouts:           pr.Spec.Timeouts,
+		TaskRunSpecs:       pr.Spec.TaskRunSpecs,
 	}
 	for _, prSpec := range pr.Spec.PipelineRunSpecs {
 		if prSpec.PipelineTaskName == pipelineTaskName {
@@ -676,6 +678,7 @@ func (pr *PipelineRun) GetPipelinePipelineRunSpec(pipelineTaskName string) Pipel
 			}
 			s.Timeouts = prSpec.Timeouts
 			s.Metadata = prSpec.Metadata
+			s.TaskRunSpecs = prSpec.TaskRunSpecs
 		}
 	}
 	return s
