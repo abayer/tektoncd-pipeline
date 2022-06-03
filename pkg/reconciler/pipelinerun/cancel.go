@@ -155,11 +155,11 @@ func getChildObjectsFromPRStatus(ctx context.Context, prs v1beta1.PipelineRunSta
 	if cfg.FeatureFlags.EmbeddedStatus != config.FullEmbeddedStatus {
 		for _, cr := range prs.ChildReferences {
 			switch cr.Kind {
-			case "TaskRun":
+			case v1beta1.TaskRunChildKind:
 				trNames = append(trNames, cr.Name)
-			case "Run":
+			case v1beta1.RunChildKind:
 				runNames = append(runNames, cr.Name)
-			case "PipelineRun":
+			case v1beta1.PipelineRunChildKind:
 				prNames = append(prNames, cr.Name)
 			default:
 				unknownChildKinds[cr.Name] = cr.Kind

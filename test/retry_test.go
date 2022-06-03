@@ -26,9 +26,8 @@ import (
 	"time"
 
 	"github.com/tektoncd/pipeline/pkg/apis/config"
-
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/test/parse"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
@@ -96,7 +95,7 @@ spec:
 		if len(pr.Status.ChildReferences) != 1 {
 			t.Fatalf("Got %d child references, wanted %d", len(pr.Status.ChildReferences), numRetries)
 		}
-		if pr.Status.ChildReferences[0].Kind != "TaskRun" {
+		if pr.Status.ChildReferences[0].Kind != v1beta1.TaskRunChildKind {
 			t.Errorf("Got a child reference of kind %s, but expected TaskRun", pr.Status.ChildReferences[0].Kind)
 		}
 		taskRunName := pr.Status.ChildReferences[0].Name

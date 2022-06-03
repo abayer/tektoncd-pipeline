@@ -486,6 +486,26 @@ type PipelineRunStatusFields struct {
 	ChildReferences []ChildStatusReference `json:"childReferences,omitempty"`
 }
 
+// ChildReferencesByKind returns a map of slices of ChildStatusReferences for this PipelineRun, organized by the kind of the reference.
+func (pr *PipelineRunStatus) ChildReferencesByKind() map[string][]ChildStatusReference {
+	refsByKind := make(map[string][]ChildStatusReference)
+
+	for _, cr := range pr.ChildReferences {
+		switch cr.Kind {
+		case TaskRunChildKind:
+			refsByKind[TaskRunChildKind] = append(refsByKind[TaskRunChildKind], cr)
+		case RunChildKind:
+			refsByKind[RunChildKind] = append(refsByKind[RunChildKind], cr)
+		case PipelineRunChildKind:
+			refsByKind[PipelineRunChildKind] = append(refsByKind[PipelineRunChildKind], cr)
+		default:
+			refsByKind[UnknownChildKind] = append(refsByKind[UnknownChildKind], cr)
+		}
+	}
+
+	return refsByKind
+}
+
 // SkippedTask is used to describe the Tasks that were skipped due to their When Expressions
 // evaluating to False. This is a struct because we are looking into including more details
 // about the When Expressions that caused this Task to be skipped.
@@ -683,3 +703,14 @@ func (pr *PipelineRun) GetPipelinePipelineRunSpec(pipelineTaskName string) Pipel
 	}
 	return s
 }
+
+const (
+	// TaskRunChildKind indicates that the child is a TaskRun
+	TaskRunChildKind = "TaskRun"
+	// RunChildKind indicates that the child is a Run
+	RunChildKind = "Run"
+	// PipelineRunChildKind indicates that the child is a PipelineRun
+	PipelineRunChildKind = "PipelineRun"
+	// UnknownChildKind indicates that the child is an unknown kind
+	UnknownChildKind = "Unknown"
+)

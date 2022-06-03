@@ -2362,14 +2362,14 @@ func TestResolvePipelineRun_withExistingTaskRunsAndPipelineRuns(t *testing.T) {
 					{
 						TypeMeta: runtime.TypeMeta{
 							APIVersion: "v1beta1",
-							Kind:       "TaskRun",
+							Kind:       v1beta1.TaskRunChildKind,
 						},
 						Name:             "pipelinerun-mytask-with-a-really-long-name-to-trigger-tru",
 						PipelineTaskName: "mytask-with-a-really-long-name-to-trigger-truncation",
 					}, {
 						TypeMeta: runtime.TypeMeta{
 							APIVersion: "v1beta1",
-							Kind:       "PipelineRun",
+							Kind:       v1beta1.PipelineRunChildKind,
 						},
 						Name:             "pipelinerun-child-pipeline",
 						PipelineTaskName: "child-pipeline",
@@ -3842,7 +3842,7 @@ func TestGetTaskRunName(t *testing.T) {
 		},
 	}
 	childRefs := []v1beta1.ChildStatusReference{{
-		TypeMeta:         runtime.TypeMeta{Kind: "TaskRun"},
+		TypeMeta:         runtime.TypeMeta{Kind: v1beta1.TaskRunChildKind},
 		Name:             "taskrun-for-task1",
 		PipelineTaskName: "task1",
 	}}
@@ -3900,7 +3900,7 @@ func TestGetRunName(t *testing.T) {
 		},
 	}
 	childRefs := []v1beta1.ChildStatusReference{{
-		TypeMeta:         runtime.TypeMeta{Kind: "Run"},
+		TypeMeta:         runtime.TypeMeta{Kind: v1beta1.RunChildKind},
 		Name:             "run-for-task1",
 		PipelineTaskName: "task1",
 	}}

@@ -302,7 +302,7 @@ func (state PipelineRunState) GetChildReferences(pipelineVersion string, runVers
 		switch {
 		case rprt.CustomTask:
 			childName = rprt.RunName
-			childTaskKind = "Run"
+			childTaskKind = v1beta1.RunChildKind
 			if rprt.Run != nil {
 				childAPIVersion = rprt.Run.APIVersion
 			} else {
@@ -310,7 +310,7 @@ func (state PipelineRunState) GetChildReferences(pipelineVersion string, runVers
 			}
 		case rprt.IsPipeline():
 			childName = rprt.PipelineRunName
-			childTaskKind = "PipelineRun"
+			childTaskKind = v1beta1.PipelineRunChildKind
 			if rprt.PipelineRun != nil {
 				childAPIVersion = rprt.PipelineRun.APIVersion
 			} else {
@@ -318,7 +318,7 @@ func (state PipelineRunState) GetChildReferences(pipelineVersion string, runVers
 			}
 		default:
 			childName = rprt.TaskRunName
-			childTaskKind = "TaskRun"
+			childTaskKind = v1beta1.TaskRunChildKind
 			if rprt.TaskRun != nil {
 				childAPIVersion = rprt.TaskRun.APIVersion
 			} else {

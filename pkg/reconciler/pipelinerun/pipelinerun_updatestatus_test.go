@@ -773,7 +773,7 @@ func TestUpdatePipelineRunStatusFromChildRefs(t *testing.T) {
 			ChildReferences: []v1beta1.ChildStatusReference{{
 				TypeMeta: runtime.TypeMeta{
 					APIVersion: "tekton.dev/v1alpha1",
-					Kind:       "Run",
+					Kind:       v1beta1.RunChildKind,
 				},
 				Name:             "pr-run-6-xxyyy",
 				PipelineTaskName: "task-6",
@@ -1141,7 +1141,7 @@ func TestValidateChildObjectsInPipelineRunStatus(t *testing.T) {
 						},
 					},
 					ChildReferences: []v1beta1.ChildStatusReference{{
-						TypeMeta:         runtime.TypeMeta{Kind: "TaskRun"},
+						TypeMeta:         runtime.TypeMeta{Kind: v1beta1.TaskRunChildKind},
 						Name:             "t1",
 						PipelineTaskName: "task-1",
 					}},
@@ -1165,11 +1165,11 @@ func TestValidateChildObjectsInPipelineRunStatus(t *testing.T) {
 					},
 					ChildReferences: []v1beta1.ChildStatusReference{
 						{
-							TypeMeta:         runtime.TypeMeta{Kind: "TaskRun"},
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.TaskRunChildKind},
 							Name:             "t1",
 							PipelineTaskName: "task-1",
 						}, {
-							TypeMeta:         runtime.TypeMeta{Kind: "Run"},
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.RunChildKind},
 							Name:             "r1",
 							PipelineTaskName: "run-1",
 						}, {
@@ -1202,11 +1202,11 @@ func TestValidateChildObjectsInPipelineRunStatus(t *testing.T) {
 					},
 					ChildReferences: []v1beta1.ChildStatusReference{
 						{
-							TypeMeta:         runtime.TypeMeta{Kind: "TaskRun"},
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.TaskRunChildKind},
 							Name:             "t1",
 							PipelineTaskName: "task-1",
 						}, {
-							TypeMeta:         runtime.TypeMeta{Kind: "Run"},
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.RunChildKind},
 							Name:             "r1",
 							PipelineTaskName: "run-1",
 						}, {
@@ -1238,6 +1238,13 @@ func TestValidateChildObjectsInPipelineRunStatus(t *testing.T) {
 							PipelineTaskName: "run-1",
 						},
 					},
+					ChildReferences: []v1beta1.ChildStatusReference{
+						{
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.PipelineRunChildKind},
+							Name:             "pr1",
+							PipelineTaskName: "pr-1",
+						},
+					},
 				},
 			},
 			expectedErrStrs: nil,
@@ -1248,13 +1255,17 @@ func TestValidateChildObjectsInPipelineRunStatus(t *testing.T) {
 				PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{
 					ChildReferences: []v1beta1.ChildStatusReference{
 						{
-							TypeMeta:         runtime.TypeMeta{Kind: "TaskRun"},
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.TaskRunChildKind},
 							Name:             "t1",
 							PipelineTaskName: "task-1",
 						}, {
-							TypeMeta:         runtime.TypeMeta{Kind: "Run"},
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.RunChildKind},
 							Name:             "r1",
 							PipelineTaskName: "run-1",
+						}, {
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.PipelineRunChildKind},
+							Name:             "pr1",
+							PipelineTaskName: "pr-1",
 						},
 					},
 				},
@@ -1277,13 +1288,17 @@ func TestValidateChildObjectsInPipelineRunStatus(t *testing.T) {
 					},
 					ChildReferences: []v1beta1.ChildStatusReference{
 						{
-							TypeMeta:         runtime.TypeMeta{Kind: "TaskRun"},
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.TaskRunChildKind},
 							Name:             "t1",
 							PipelineTaskName: "task-1",
 						}, {
-							TypeMeta:         runtime.TypeMeta{Kind: "Run"},
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.RunChildKind},
 							Name:             "r1",
 							PipelineTaskName: "run-1",
+						}, {
+							TypeMeta:         runtime.TypeMeta{Kind: v1beta1.PipelineRunChildKind},
+							Name:             "pr1",
+							PipelineTaskName: "pr-1",
 						},
 					},
 				},
@@ -1348,7 +1363,7 @@ func prStatusFromInputs(embeddedStatus string, status duckv1beta1.Status, taskRu
 		// Populate PipelineRuns in ChildReferences if this isn't minimal or both.
 		if !shouldHaveMinimalEmbeddedStatus(embeddedStatus) {
 			for _, child := range childRefs {
-				if child.Kind == "PipelineRun" {
+				if child.Kind == v1beta1.PipelineRunChildKind {
 					prs.ChildReferences = append(prs.ChildReferences, child)
 				}
 			}

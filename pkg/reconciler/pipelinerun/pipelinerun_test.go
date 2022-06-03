@@ -2102,7 +2102,7 @@ func runTestReconcileOnCancelledRunFinallyPipelineRunWithFinalTaskAndRetries(t *
 		prs[0].Status.ChildReferences = append(prs[0].Status.ChildReferences, v1beta1.ChildStatusReference{
 			TypeMeta: runtime.TypeMeta{
 				APIVersion: v1beta1.SchemeGroupVersion.String(),
-				Kind:       "TaskRun",
+				Kind:       v1beta1.TaskRunChildKind,
 			},
 			Name:             "test-pipeline-run-cancelled-run-finally-hello-world",
 			PipelineTaskName: "hello-world-1",
@@ -5382,7 +5382,7 @@ status:
 			{
 				TypeMeta: runtime.TypeMeta{
 					APIVersion: v1beta1.SchemeGroupVersion.String(),
-					Kind:       "TaskRun",
+					Kind:       v1beta1.TaskRunChildKind,
 				},
 				Name:             taskRunDone.Name,
 				PipelineTaskName: "hello-world-1",
@@ -5390,7 +5390,7 @@ status:
 			{
 				TypeMeta: runtime.TypeMeta{
 					APIVersion: v1beta1.SchemeGroupVersion.String(),
-					Kind:       "TaskRun",
+					Kind:       v1beta1.TaskRunChildKind,
 				},
 				Name:             taskRunWithCondition.Name,
 				PipelineTaskName: "hello-world-3",
@@ -5550,7 +5550,7 @@ spec:
 		runsStatus := make(map[string]*v1beta1.PipelineRunRunStatus)
 
 		for _, cr := range reconciledRun.Status.ChildReferences {
-			if cr.Kind == "TaskRun" {
+			if cr.Kind == v1beta1.TaskRunChildKind {
 				trStatusForPipelineRun := &v1beta1.PipelineRunTaskRunStatus{
 					PipelineTaskName: cr.PipelineTaskName,
 					WhenExpressions:  cr.WhenExpressions,
@@ -5572,7 +5572,7 @@ spec:
 				}
 
 				taskRunsStatus[cr.Name] = trStatusForPipelineRun
-			} else if cr.Kind == "Run" {
+			} else if cr.Kind == v1beta1.RunChildKind {
 				rStatusForPipelineRun := &v1beta1.PipelineRunRunStatus{
 					PipelineTaskName: cr.PipelineTaskName,
 					WhenExpressions:  cr.WhenExpressions,
@@ -5690,10 +5690,10 @@ spec:
 			t.Fatalf("Expected 2 ChildReferences but got %d", len(reconciledRun.Status.ChildReferences))
 		}
 		for _, cr := range reconciledRun.Status.ChildReferences {
-			if cr.Kind == "TaskRun" {
+			if cr.Kind == v1beta1.TaskRunChildKind {
 				taskRunName = cr.Name
 			}
-			if cr.Kind == "Run" {
+			if cr.Kind == v1beta1.RunChildKind {
 				runName = cr.Name
 			}
 		}
@@ -7390,8 +7390,8 @@ func verifyTaskRunStatusesCount(t *testing.T, embeddedStatus string, prStatus v1
 	if shouldHaveFullEmbeddedStatus(embeddedStatus) && len(prStatus.TaskRuns) != taskCount {
 		t.Errorf("Expected PipelineRun status to have exactly %d tasks, but was %d", taskCount, len(prStatus.TaskRuns))
 	}
-	if shouldHaveMinimalEmbeddedStatus(embeddedStatus) && len(filterChildRefsForKind(prStatus.ChildReferences, "TaskRun")) != taskCount {
-		t.Errorf("Expected PipelineRun status ChildReferences to have %d tasks, but was %d", taskCount, len(filterChildRefsForKind(prStatus.ChildReferences, "TaskRun")))
+	if shouldHaveMinimalEmbeddedStatus(embeddedStatus) && len(filterChildRefsForKind(prStatus.ChildReferences, v1beta1.TaskRunChildKind)) != taskCount {
+		t.Errorf("Expected PipelineRun status ChildReferences to have %d tasks, but was %d", taskCount, len(filterChildRefsForKind(prStatus.ChildReferences, v1beta1.TaskRunChildKind)))
 	}
 }
 
@@ -7406,7 +7406,7 @@ func verifyTaskRunStatusesNames(t *testing.T, embeddedStatus string, prStatus v1
 	}
 	if shouldHaveMinimalEmbeddedStatus(embeddedStatus) {
 		tnMap := make(map[string]struct{})
-		for _, cr := range filterChildRefsForKind(prStatus.ChildReferences, "TaskRun") {
+		for _, cr := range filterChildRefsForKind(prStatus.ChildReferences, v1beta1.TaskRunChildKind) {
 			tnMap[cr.Name] = struct{}{}
 		}
 
@@ -7418,13 +7418,36 @@ func verifyTaskRunStatusesNames(t *testing.T, embeddedStatus string, prStatus v1
 	}
 }
 
+func verifyChildPRStatusesCount(t *testing.T, prStatus v1beta1.PipelineRunStatus, childPRCount int) {
+	t.Helper()
+
+	if len(filterChildRefsForKind(prStatus.ChildReferences, v1beta1.PipelineRunChildKind)) != childPRCount {
+		t.Errorf("Expected PipelineRun status ChildReferences to have %d child PipelineRuns, but was %d", childPRCount,
+			len(filterChildRefsForKind(prStatus.ChildReferences, v1beta1.PipelineRunChildKind)))
+	}
+}
+
+func verifyChildPRStatusesNames(t *testing.T, prStatus v1beta1.PipelineRunStatus, childPRNames ...string) {
+	t.Helper()
+	rnMap := make(map[string]struct{})
+	for _, cr := range filterChildRefsForKind(prStatus.ChildReferences, v1beta1.PipelineRunChildKind) {
+		rnMap[cr.Name] = struct{}{}
+	}
+
+	for _, rn := range childPRNames {
+		if _, ok := rnMap[rn]; !ok {
+			t.Errorf("Expected PipelineRun status to include Run status for %s but was %v", rn, prStatus.ChildReferences)
+		}
+	}
+}
+
 func verifyRunStatusesCount(t *testing.T, embeddedStatus string, prStatus v1beta1.PipelineRunStatus, runCount int) {
 	t.Helper()
 	if shouldHaveFullEmbeddedStatus(embeddedStatus) && len(prStatus.Runs) != runCount {
 		t.Errorf("Expected PipelineRun status to have exactly %d runs, but was %d", runCount, len(prStatus.Runs))
 	}
-	if shouldHaveMinimalEmbeddedStatus(embeddedStatus) && len(filterChildRefsForKind(prStatus.ChildReferences, "Run")) != runCount {
-		t.Errorf("Expected PipelineRun status ChildReferences to have %d runs, but was %d", runCount, len(filterChildRefsForKind(prStatus.ChildReferences, "Run")))
+	if shouldHaveMinimalEmbeddedStatus(embeddedStatus) && len(filterChildRefsForKind(prStatus.ChildReferences, v1beta1.RunChildKind)) != runCount {
+		t.Errorf("Expected PipelineRun status ChildReferences to have %d runs, but was %d", runCount, len(filterChildRefsForKind(prStatus.ChildReferences, v1beta1.RunChildKind)))
 	}
 }
 
@@ -7439,7 +7462,7 @@ func verifyRunStatusesNames(t *testing.T, embeddedStatus string, prStatus v1beta
 	}
 	if shouldHaveMinimalEmbeddedStatus(embeddedStatus) {
 		rnMap := make(map[string]struct{})
-		for _, cr := range filterChildRefsForKind(prStatus.ChildReferences, "Run") {
+		for _, cr := range filterChildRefsForKind(prStatus.ChildReferences, v1beta1.RunChildKind) {
 			rnMap[cr.Name] = struct{}{}
 		}
 

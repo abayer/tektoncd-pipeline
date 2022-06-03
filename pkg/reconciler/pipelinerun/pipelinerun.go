@@ -1377,7 +1377,7 @@ func validateChildObjectsInPipelineRunStatus(ctx context.Context, prs v1beta1.Pi
 
 	nonChildPRCount := 0
 	for _, child := range prs.ChildReferences {
-		if child.Kind != "PipelineRun" {
+		if child.Kind != v1beta1.PipelineRunChildKind {
 			nonChildPRCount++
 		}
 	}
@@ -1401,7 +1401,7 @@ func validateChildObjectsInPipelineRunStatus(ctx context.Context, prs v1beta1.Pi
 		}
 		for _, cr := range prs.ChildReferences {
 			switch cr.Kind {
-			case "TaskRun", "Run", "PipelineRun":
+			case v1beta1.TaskRunChildKind, v1beta1.RunChildKind, v1beta1.PipelineRunChildKind:
 				continue
 			default:
 				err = multierror.Append(err, fmt.Errorf("child with name %s has unknown kind %s", cr.Name, cr.Kind))
@@ -1419,7 +1419,7 @@ func validateChildObjectsInPipelineRunStatus(ctx context.Context, prs v1beta1.Pi
 
 		for _, cr := range prs.ChildReferences {
 			switch cr.Kind {
-			case "TaskRun":
+			case v1beta1.TaskRunChildKind:
 				tr, ok := prs.TaskRuns[cr.Name]
 				if !ok {
 					err = multierror.Append(err, fmt.Errorf("embedded-status is 'both', and child TaskRun with name %s found in ChildReferences only", cr.Name))
@@ -1428,7 +1428,7 @@ func validateChildObjectsInPipelineRunStatus(ctx context.Context, prs v1beta1.Pi
 						fmt.Errorf("child TaskRun with name %s has PipelineTask name %s in ChildReferences and %s in TaskRuns",
 							cr.Name, cr.PipelineTaskName, tr.PipelineTaskName))
 				}
-			case "Run":
+			case v1beta1.RunChildKind:
 				r, ok := prs.Runs[cr.Name]
 				if !ok {
 					err = multierror.Append(err, fmt.Errorf("embedded-status is 'both', and child Run with name %s found in ChildReferences only", cr.Name))
@@ -1437,7 +1437,7 @@ func validateChildObjectsInPipelineRunStatus(ctx context.Context, prs v1beta1.Pi
 						fmt.Errorf("child Run with name %s has PipelineTask name %s in ChildReferences and %s in Runs",
 							cr.Name, cr.PipelineTaskName, r.PipelineTaskName))
 				}
-			case "PipelineRun":
+			case v1beta1.PipelineRunChildKind:
 				// Child PipelineRuns are in ChildReferences regardless of embedded status.
 				continue
 			default:
@@ -1655,7 +1655,7 @@ func updatePipelineRunStatusFromChildRefs(logger *zap.SugaredLogger, pr *v1beta1
 				childRefByPipelineTask[pipelineTaskName] = &v1beta1.ChildStatusReference{
 					TypeMeta: runtime.TypeMeta{
 						APIVersion: v1beta1.SchemeGroupVersion.String(),
-						Kind:       "TaskRun",
+						Kind:       v1beta1.TaskRunChildKind,
 					},
 					Name:             tr.Name,
 					PipelineTaskName: pipelineTaskName,
@@ -1677,7 +1677,7 @@ func updatePipelineRunStatusFromChildRefs(logger *zap.SugaredLogger, pr *v1beta1
 				childRefByPipelineTask[pipelineTaskName] = &v1beta1.ChildStatusReference{
 					TypeMeta: runtime.TypeMeta{
 						APIVersion: v1alpha1.SchemeGroupVersion.String(),
-						Kind:       "Run",
+						Kind:       v1beta1.RunChildKind,
 					},
 					Name:             r.Name,
 					PipelineTaskName: pipelineTaskName,
@@ -1694,7 +1694,7 @@ func updatePipelineRunStatusFromChildRefs(logger *zap.SugaredLogger, pr *v1beta1
 				childRefByPipelineTask[pipelineTaskName] = &v1beta1.ChildStatusReference{
 					TypeMeta: runtime.TypeMeta{
 						APIVersion: v1beta1.SchemeGroupVersion.String(),
-						Kind:       "TaskRun",
+						Kind:       v1beta1.TaskRunChildKind,
 					},
 					Name:             taskRunName,
 					PipelineTaskName: pipelineTaskName,
@@ -1726,7 +1726,7 @@ func updatePipelineRunStatusFromChildRefs(logger *zap.SugaredLogger, pr *v1beta1
 			childRefByPipelineTask[pipelineTaskName] = &v1beta1.ChildStatusReference{
 				TypeMeta: runtime.TypeMeta{
 					APIVersion: v1beta1.SchemeGroupVersion.String(),
-					Kind:       "PipelineRun",
+					Kind:       v1beta1.PipelineRunChildKind,
 				},
 				Name:             r.Name,
 				PipelineTaskName: pipelineTaskName,

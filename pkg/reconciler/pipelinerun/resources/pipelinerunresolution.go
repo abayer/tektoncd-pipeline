@@ -662,7 +662,7 @@ func getConditionCheckName(taskRunStatus map[string]*v1beta1.PipelineRunTaskRunS
 // GetTaskRunName should return a unique name for a `TaskRun` if one has not already been defined, and the existing one otherwise.
 func GetTaskRunName(taskRunsStatus map[string]*v1beta1.PipelineRunTaskRunStatus, childRefs []v1beta1.ChildStatusReference, ptName, prName string) string {
 	for _, cr := range childRefs {
-		if cr.Kind == "TaskRun" && cr.PipelineTaskName == ptName {
+		if cr.Kind == v1beta1.TaskRunChildKind && cr.PipelineTaskName == ptName {
 			return cr.Name
 		}
 	}
@@ -680,7 +680,7 @@ func GetTaskRunName(taskRunsStatus map[string]*v1beta1.PipelineRunTaskRunStatus,
 // been defined, and the existing one otherwise.
 func getRunName(runsStatus map[string]*v1beta1.PipelineRunRunStatus, childRefs []v1beta1.ChildStatusReference, ptName, prName string) string {
 	for _, cr := range childRefs {
-		if cr.Kind == "Run" && cr.PipelineTaskName == ptName {
+		if cr.Kind == v1beta1.RunChildKind && cr.PipelineTaskName == ptName {
 			return cr.Name
 		}
 	}
@@ -698,7 +698,7 @@ func getRunName(runsStatus map[string]*v1beta1.PipelineRunRunStatus, childRefs [
 // been defined, and the existing one otherwise.
 func getChildPipelineRunName(childRefs []v1beta1.ChildStatusReference, ptName, prName string) string {
 	for _, cr := range childRefs {
-		if cr.Kind == "PipelineRun" && cr.PipelineTaskName == ptName {
+		if cr.Kind == v1beta1.PipelineRunChildKind && cr.PipelineTaskName == ptName {
 			return cr.Name
 		}
 	}

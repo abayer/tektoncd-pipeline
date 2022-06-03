@@ -137,7 +137,7 @@ spec:
 	}
 	if embeddedStatusValue != config.FullEmbeddedStatus {
 		for _, cr := range pr.Status.ChildReferences {
-			if cr.Kind == "Run" {
+			if cr.Kind == v1beta1.RunChildKind {
 				runNames = append(runNames, cr.Name)
 			}
 		}
@@ -218,7 +218,7 @@ spec:
 	}
 	if embeddedStatusValue != config.FullEmbeddedStatus {
 		for _, cr := range pr.Status.ChildReferences {
-			if cr.Kind == "TaskRun" {
+			if cr.Kind == v1beta1.TaskRunChildKind {
 				taskRunName = cr.Name
 			}
 		}

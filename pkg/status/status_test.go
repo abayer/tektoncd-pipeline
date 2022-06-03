@@ -57,7 +57,7 @@ func TestGetTaskRunStatusForPipelineTask(t *testing.T) {
 			name: "taskrun not found",
 			childRef: v1beta1.ChildStatusReference{
 				TypeMeta: runtime.TypeMeta{
-					Kind: "TaskRun",
+					Kind: v1beta1.TaskRunChildKind,
 				},
 				Name:             "some-task-run",
 				PipelineTaskName: "some-task",
@@ -75,7 +75,7 @@ status:
   podName: my-pod-name
 `),
 			childRef: v1beta1.ChildStatusReference{
-				TypeMeta:         runtime.TypeMeta{Kind: "TaskRun"},
+				TypeMeta:         runtime.TypeMeta{Kind: v1beta1.TaskRunChildKind},
 				Name:             "some-task-run",
 				PipelineTaskName: "some-task",
 			},
@@ -144,7 +144,7 @@ func TestGetRunStatusForPipelineTask(t *testing.T) {
 			name: "run not found",
 			childRef: v1beta1.ChildStatusReference{
 				TypeMeta: runtime.TypeMeta{
-					Kind: "Run",
+					Kind: v1beta1.RunChildKind,
 				},
 				Name:             "some-run",
 				PipelineTaskName: "some-task",
@@ -161,7 +161,7 @@ status:
     type: Succeeded
 `),
 			childRef: v1beta1.ChildStatusReference{
-				TypeMeta:         runtime.TypeMeta{Kind: "Run"},
+				TypeMeta:         runtime.TypeMeta{Kind: v1beta1.RunChildKind},
 				Name:             "some-run",
 				PipelineTaskName: "some-task",
 			},
@@ -206,6 +206,90 @@ status:
 	}
 }
 
+func TestGetPipelineRunStatusForPipelineTask(t *testing.T) {
+	testCases := []struct {
+		name           string
+		childPR        *v1beta1.PipelineRun
+		childRef       v1beta1.ChildStatusReference
+		expectedStatus *v1beta1.PipelineRunStatus
+		expectedErr    error
+	}{
+		{
+			name: "wrong kind",
+			childRef: v1beta1.ChildStatusReference{
+				TypeMeta: runtime.TypeMeta{
+					Kind: "something-else",
+				},
+				PipelineTaskName: "some-task",
+			},
+			expectedErr: errors.New("could not fetch status for PipelineTask some-task: should have kind PipelineRun, but is something-else"),
+		}, {
+			name: "pipelinerun not found",
+			childRef: v1beta1.ChildStatusReference{
+				TypeMeta: runtime.TypeMeta{
+					Kind: v1beta1.PipelineRunChildKind,
+				},
+				Name:             "some-pipeline-run",
+				PipelineTaskName: "some-pipeline",
+			},
+		}, {
+			name: "success",
+			childPR: parse.MustParsePipelineRun(t, `
+metadata:
+  name: some-pipeline-run
+spec: {}
+status:
+  conditions:
+  - status: "False"
+    type: Succeeded
+`),
+			childRef: v1beta1.ChildStatusReference{
+				TypeMeta:         runtime.TypeMeta{Kind: v1beta1.PipelineRunChildKind},
+				Name:             "some-pipeline-run",
+				PipelineTaskName: "some-pipeline",
+			},
+			expectedStatus: &v1beta1.PipelineRunStatus{
+				Status: duckv1beta1.Status{
+					Conditions: duckv1beta1.Conditions{{
+						Type:   apis.ConditionSucceeded,
+						Status: corev1.ConditionFalse,
+					}},
+				},
+				PipelineRunStatusFields: v1beta1.PipelineRunStatusFields{},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, _ := ttesting.SetupFakeContext(t)
+			d := test.Data{}
+			if tc.childPR != nil {
+				d.PipelineRuns = []*v1beta1.PipelineRun{tc.childPR}
+			}
+			clients, _ := test.SeedTestData(t, ctx, d)
+
+			childPRStatus, err := GetPipelineRunStatusForPipelineTask(ctx, clients.Pipeline, "", tc.childRef)
+
+			if tc.expectedErr != nil {
+				if err == nil {
+					t.Fatalf("no error, but expected '%s'", tc.expectedErr.Error())
+				}
+				if err.Error() != tc.expectedErr.Error() {
+					t.Fatalf("expected error '%s', but got '%s'", tc.expectedErr.Error(), err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("received unexpected error '%s'", err.Error())
+				}
+				if d := cmp.Diff(tc.expectedStatus, childPRStatus); d != "" {
+					t.Errorf("status does not match expected. Diff %s", diff.PrintWantGot(d))
+				}
+			}
+		})
+	}
+}
+
 func TestGetFullPipelineTaskStatuses(t *testing.T) {
 	tr1 := parse.MustParseTaskRun(t, `
 metadata:
@@ -235,21 +319,37 @@ status:
     value: rab
 `)
 
+	childPR1 := parse.MustParsePipelineRun(t, `
+metadata:
+  name: pr-child-pr-1
+spec: {}
+status:
+  conditions:
+  - status: "True"
+    type: Succeeded
+  pipelineResults:
+  - name: bResult
+    value: bResultValue
+`)
+
 	testCases := []struct {
-		name                string
-		originalPR          *v1beta1.PipelineRun
-		taskRuns            []*v1beta1.TaskRun
-		runs                []*v1alpha1.Run
-		expectedTRStatuses  map[string]*v1beta1.PipelineRunTaskRunStatus
-		expectedRunStatuses map[string]*v1beta1.PipelineRunRunStatus
-		expectedErr         error
+		name                    string
+		originalPR              *v1beta1.PipelineRun
+		taskRuns                []*v1beta1.TaskRun
+		runs                    []*v1alpha1.Run
+		childPRs                []*v1beta1.PipelineRun
+		expectedTRStatuses      map[string]*v1beta1.PipelineRunTaskRunStatus
+		expectedRunStatuses     map[string]*v1beta1.PipelineRunRunStatus
+		expectedChildPRStatuses map[string]*v1beta1.PipelineRunPipelineRunStatus
+		expectedErr             error
 	}{
 		{
-			name:                "nil pr",
-			originalPR:          nil,
-			expectedTRStatuses:  nil,
-			expectedRunStatuses: nil,
-			expectedErr:         nil,
+			name:                    "nil pr",
+			originalPR:              nil,
+			expectedTRStatuses:      nil,
+			expectedRunStatuses:     nil,
+			expectedChildPRStatuses: nil,
+			expectedErr:             nil,
 		},
 		{
 			name: "minimal embedded",
@@ -267,6 +367,10 @@ status:
     kind: Run
     name: pr-run-1
     pipelineTaskName: run-1
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    name: pr-child-pr-1
+    pipelineTaskName: child-pr-1
   conditions:
   - message: Not all Tasks in the Pipeline have finished executing
     reason: Running
@@ -275,6 +379,7 @@ status:
 `),
 			taskRuns: []*v1beta1.TaskRun{tr1},
 			runs:     []*v1alpha1.Run{run1},
+			childPRs: []*v1beta1.PipelineRun{childPR1},
 			expectedTRStatuses: mustParseTaskRunStatusMap(t, `
 pr-task-1:
   pipelineTaskName: task-1
@@ -298,6 +403,17 @@ pr-run-1:
       value: oof
     - name: bar
       value: rab
+`),
+			expectedChildPRStatuses: mustParsePipelineRunStatusMap(t, `
+pr-child-pr-1:
+  pipelineTaskName: child-pr-1
+  status:
+    conditions:
+    - status: "True"
+      type: Succeeded
+    pipelineResults:
+    - name: bResult
+      value: bResultValue
 `),
 			expectedErr: nil,
 		}, {
@@ -329,6 +445,11 @@ status:
           value: oof
         - name: bar
           value: rab
+  childReferences:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    name: pr-child-pr-1
+    pipelineTaskName: child-pr-1
   conditions:
   - message: Not all Tasks in the Pipeline have finished executing
     reason: Running
@@ -337,6 +458,7 @@ status:
 `),
 			taskRuns: []*v1beta1.TaskRun{tr1},
 			runs:     []*v1alpha1.Run{run1},
+			childPRs: []*v1beta1.PipelineRun{childPR1},
 			expectedTRStatuses: mustParseTaskRunStatusMap(t, `
 pr-task-1:
   pipelineTaskName: task-1
@@ -360,6 +482,17 @@ pr-run-1:
       value: oof
     - name: bar
       value: rab
+`),
+			expectedChildPRStatuses: mustParsePipelineRunStatusMap(t, `
+pr-child-pr-1:
+  pipelineTaskName: child-pr-1
+  status:
+    conditions:
+    - status: "True"
+      type: Succeeded
+    pipelineResults:
+    - name: bResult
+      value: bResultValue
 `),
 			expectedErr: nil,
 		}, {
@@ -400,6 +533,10 @@ status:
     kind: Run
     name: pr-run-2
     pipelineTaskName: run-2
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    name: pr-child-pr-1
+    pipelineTaskName: child-pr-1
   conditions:
   - message: Not all Tasks in the Pipeline have finished executing
     reason: Running
@@ -408,6 +545,7 @@ status:
 `),
 			taskRuns: []*v1beta1.TaskRun{tr1},
 			runs:     []*v1alpha1.Run{run1},
+			childPRs: []*v1beta1.PipelineRun{childPR1},
 			expectedTRStatuses: mustParseTaskRunStatusMap(t, `
 pr-task-1:
   pipelineTaskName: task-1
@@ -431,6 +569,17 @@ pr-run-1:
       value: oof
     - name: bar
       value: rab
+`),
+			expectedChildPRStatuses: mustParsePipelineRunStatusMap(t, `
+pr-child-pr-1:
+  pipelineTaskName: child-pr-1
+  status:
+    conditions:
+    - status: "True"
+      type: Succeeded
+    pipelineResults:
+    - name: bResult
+      value: bResultValue
 `),
 			expectedErr: nil,
 		}, {
@@ -471,7 +620,8 @@ pr-task-1:
 pr-run-1:
   pipelineTaskName: run-1
 `),
-			expectedErr: nil,
+			expectedChildPRStatuses: map[string]*v1beta1.PipelineRunPipelineRunStatus{},
+			expectedErr:             nil,
 		},
 	}
 
@@ -490,10 +640,13 @@ pr-run-1:
 			if len(tc.runs) > 0 {
 				d.Runs = tc.runs
 			}
+			if len(tc.childPRs) > 0 {
+				d.PipelineRuns = append(d.PipelineRuns, tc.childPRs...)
+			}
 
 			clients, _ := test.SeedTestData(t, ctx, d)
 
-			trStatuses, runStatuses, err := GetFullPipelineTaskStatuses(ctx, clients.Pipeline, "", tc.originalPR)
+			trStatuses, runStatuses, childPRStatuses, err := GetFullPipelineTaskStatuses(ctx, clients.Pipeline, "", tc.originalPR)
 
 			if tc.expectedErr != nil {
 				if err == nil {
@@ -512,6 +665,9 @@ pr-run-1:
 				if d := cmp.Diff(tc.expectedRunStatuses, runStatuses); d != "" {
 					t.Errorf("Run statuses do not match expected. Diff %s", diff.PrintWantGot(d))
 				}
+				if d := cmp.Diff(tc.expectedChildPRStatuses, childPRStatuses); d != "" {
+					t.Errorf("Child PipelineRun statuses do not match expected. Diff %s", diff.PrintWantGot(d))
+				}
 			}
 		})
 	}
@@ -529,6 +685,14 @@ func mustParseRunStatusMap(t *testing.T, yamlStr string) map[string]*v1beta1.Pip
 	var output map[string]*v1beta1.PipelineRunRunStatus
 	if err := yaml.Unmarshal([]byte(yamlStr), &output); err != nil {
 		t.Fatalf("parsing run status map %s: %v", yamlStr, err)
+	}
+	return output
+}
+
+func mustParsePipelineRunStatusMap(t *testing.T, yamlStr string) map[string]*v1beta1.PipelineRunPipelineRunStatus {
+	var output map[string]*v1beta1.PipelineRunPipelineRunStatus
+	if err := yaml.Unmarshal([]byte(yamlStr), &output); err != nil {
+		t.Fatalf("parsing task run status map %s: %v", yamlStr, err)
 	}
 	return output
 }
