@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/tektoncd/pipeline/pkg/reconciler/resolutionrequest"
 	"log"
 	"net/http"
 	"os"
@@ -106,6 +107,7 @@ func main() {
 		taskrun.NewController(opts, clock.RealClock{}),
 		pipelinerun.NewController(opts, clock.RealClock{}),
 		run.NewController(),
+		resolutionrequest.NewController(clock.RealClock{}),
 	)
 }
 
