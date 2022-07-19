@@ -31,6 +31,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/go-cmp/cmp"
+	"github.com/tektoncd/pipeline/pkg/apis/config"
 	"github.com/tektoncd/pipeline/pkg/apis/resolution/v1alpha1"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	resolutioncommon "github.com/tektoncd/pipeline/pkg/resolution/common"
@@ -49,7 +50,7 @@ import (
 
 func TestGetSelector(t *testing.T) {
 	resolver := Resolver{}
-	sel := resolver.GetSelector(context.Background())
+	sel := resolver.GetSelector(resolverContext())
 	if typ, has := sel[resolutioncommon.LabelKeyResolverType]; !has {
 		t.Fatalf("unexpected selector: %v", sel)
 	} else if typ != LabelValueGitResolverType {
@@ -64,7 +65,7 @@ func TestValidateParams(t *testing.T) {
 		PathParam:   "bar",
 		CommitParam: "baz",
 	}
-	if err := resolver.ValidateParams(context.Background(), paramsWithCommit); err != nil {
+	if err := resolver.ValidateParams(resolverContext(), paramsWithCommit); err != nil {
 		t.Fatalf("unexpected error validating params: %v", err)
 	}
 
@@ -72,8 +73,26 @@ func TestValidateParams(t *testing.T) {
 		PathParam:   "bar",
 		BranchParam: "baz",
 	}
-	if err := resolver.ValidateParams(context.Background(), paramsWithBranch); err != nil {
+	if err := resolver.ValidateParams(resolverContext(), paramsWithBranch); err != nil {
 		t.Fatalf("unexpected error validating params: %v", err)
+	}
+}
+
+func TestValidateParamsNotEnabled(t *testing.T) {
+	resolver := Resolver{}
+
+	var err error
+
+	someParams := map[string]string{
+		PathParam:   "bar",
+		CommitParam: "baz",
+	}
+	err = resolver.ValidateParams(context.Background(), someParams)
+	if err == nil {
+		t.Fatalf("expected disabled err")
+	}
+	if d := cmp.Diff(disabledError, err.Error()); d != "" {
+		t.Errorf("unexpected error: %s", diff.PrintWantGot(d))
 	}
 }
 
@@ -86,7 +105,7 @@ func TestValidateParamsMissing(t *testing.T) {
 		URLParam:    "foo",
 		BranchParam: "baz",
 	}
-	err = resolver.ValidateParams(context.Background(), paramsMissingPath)
+	err = resolver.ValidateParams(resolverContext(), paramsMissingPath)
 	if err == nil {
 		t.Fatalf("expected missing pathInRepo err")
 	}
@@ -100,7 +119,7 @@ func TestValidateParamsConflictingGitRef(t *testing.T) {
 		CommitParam: "baz",
 		BranchParam: "quux",
 	}
-	err := resolver.ValidateParams(context.Background(), params)
+	err := resolver.ValidateParams(resolverContext(), params)
 	if err == nil {
 		t.Fatalf("expected err due to conflicting commit and branch params")
 	}
@@ -109,7 +128,7 @@ func TestValidateParamsConflictingGitRef(t *testing.T) {
 func TestGetResolutionTimeoutDefault(t *testing.T) {
 	resolver := Resolver{}
 	defaultTimeout := 30 * time.Minute
-	timeout := resolver.GetResolutionTimeout(context.Background(), defaultTimeout)
+	timeout := resolver.GetResolutionTimeout(resolverContext(), defaultTimeout)
 	if timeout != defaultTimeout {
 		t.Fatalf("expected default timeout to be returned")
 	}
@@ -122,10 +141,28 @@ func TestGetResolutionTimeoutCustom(t *testing.T) {
 	config := map[string]string{
 		ConfigFieldTimeout: configTimeout.String(),
 	}
-	ctx := framework.InjectResolverConfigToContext(context.Background(), config)
+	ctx := framework.InjectResolverConfigToContext(resolverContext(), config)
 	timeout := resolver.GetResolutionTimeout(ctx, defaultTimeout)
 	if timeout != configTimeout {
 		t.Fatalf("expected timeout from config to be returned")
+	}
+}
+
+func TestResolveNotEnabled(t *testing.T) {
+	resolver := Resolver{}
+
+	var err error
+
+	someParams := map[string]string{
+		PathParam:   "bar",
+		CommitParam: "baz",
+	}
+	_, err = resolver.Resolve(context.Background(), someParams)
+	if err == nil {
+		t.Fatalf("expected disabled err")
+	}
+	if d := cmp.Diff(disabledError, err.Error()); d != "" {
+		t.Errorf("unexpected error: %s", diff.PrintWantGot(d))
 	}
 }
 
@@ -231,7 +268,7 @@ func TestResolve(t *testing.T) {
 			} else if tc.specificCommit != "" {
 				params[CommitParam] = hex.EncodeToString([]byte(tc.specificCommit))
 			}
-			output, err := resolver.Resolve(context.Background(), params)
+			output, err := resolver.Resolve(resolverContext(), params)
 			if tc.expectedErr != nil {
 				if err == nil {
 					t.Fatalf("expected err '%v' but didn't get one", tc.expectedErr)
@@ -442,6 +479,11 @@ func TestController(t *testing.T) {
 					Data: map[string]string{
 						ConfigFieldTimeout: "1m",
 					},
+				}, {
+					ObjectMeta: metav1.ObjectMeta{Namespace: system.Namespace(), Name: config.GetFeatureFlagsConfigName()},
+					Data: map[string]string{
+						"enable-git-resolver": "true",
+					},
 				}},
 				ResolutionRequests: []*v1alpha1.ResolutionRequest{request},
 			}
@@ -625,4 +667,8 @@ func createRequest(repoURL, pathInRepo, branch, specificCommit string, useNthCom
 	}
 
 	return rr
+}
+
+func resolverContext() context.Context {
+	return frtesting.ContextWithGitResolverEnabled(context.Background())
 }
