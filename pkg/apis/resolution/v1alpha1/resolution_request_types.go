@@ -56,12 +56,22 @@ type ResolutionRequestList struct {
 // ResolutionRequestSpec are all the fields in the spec of the
 // ResolutionRequest CRD.
 type ResolutionRequestSpec struct {
-	// Parameters are the runtime attributes passed to
+	// Params are the runtime attributes passed to
 	// the resolver to help it figure out how to resolve the
 	// resource being requested. For example: repo URL, commit SHA,
 	// path to file, the kind of authentication to leverage, etc.
 	// +optional
-	Parameters []ResolutionParam `json:"params,omitempty"`
+	Params []ResolutionParam `json:"params,omitempty"`
+}
+
+// ParamsMap returns a map representation of the resolution parameters
+func (rrs *ResolutionRequestSpec) ParamsMap() map[string]string {
+	params := make(map[string]string)
+	for _, rp := range rrs.Params {
+		params[rp.Name] = rp.Value
+	}
+
+	return params
 }
 
 // ResolutionRequestStatus are all the fields in a ResolutionRequest's
