@@ -5442,19 +5442,16 @@ func schema_pkg_apis_resolution_v1alpha1_ResolutionRequestSpec(ref common.Refere
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"params": {
-						VendorExtensible: spec.VendorExtensible{
-							Extensions: spec.Extensions{
-								"x-kubernetes-list-type": "atomic",
-							},
-						},
 						SchemaProps: spec.SchemaProps{
 							Description: "Params are the runtime attributes passed to the resolver to help it figure out how to resolve the resource being requested. For example: repo URL, commit SHA, path to file, the kind of authentication to leverage, etc.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.Param"),
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
 									},
 								},
 							},
@@ -5463,8 +5460,6 @@ func schema_pkg_apis_resolution_v1alpha1_ResolutionRequestSpec(ref common.Refere
 				},
 			},
 		},
-		Dependencies: []string{
-			"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.Param"},
 	}
 }
 

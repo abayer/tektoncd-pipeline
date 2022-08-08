@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -62,8 +61,7 @@ type ResolutionRequestSpec struct {
 	// resource being requested. For example: repo URL, commit SHA,
 	// path to file, the kind of authentication to leverage, etc.
 	// +optional
-	// +listType=atomic
-	Params []pipelinev1beta1.Param `json:"params,omitempty"`
+	Params map[string]string `json:"params,omitempty"`
 }
 
 // ResolutionRequestStatus are all the fields in a ResolutionRequest's

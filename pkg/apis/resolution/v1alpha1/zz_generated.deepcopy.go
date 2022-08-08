@@ -22,7 +22,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -92,9 +91,9 @@ func (in *ResolutionRequestSpec) DeepCopyInto(out *ResolutionRequestSpec) {
 	*out = *in
 	if in.Params != nil {
 		in, out := &in.Params, &out.Params
-		*out = make([]v1beta1.Param, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
 		}
 	}
 	return
