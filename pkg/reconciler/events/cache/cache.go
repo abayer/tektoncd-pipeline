@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	lru "github.com/hashicorp/golang-lru"
@@ -42,6 +43,11 @@ func AddEventSentToCache(cacheClient *lru.Cache, event *cloudevents.Event) error
 	}
 	fmt.Printf("GOT NEW CACHE KEY %s\n", eventKey)
 	cacheClient.Add(eventKey, nil)
+	var cacheKeys []string
+	for _, ck := range cacheClient.Keys() {
+		cacheKeys = append(cacheKeys, fmt.Sprintf("%v", ck))
+	}
+	fmt.Printf("NEW KEYS: %s\n", strings.Join(cacheKeys, ", "))
 	return nil
 }
 
@@ -55,6 +61,11 @@ func IsCloudEventSent(cacheClient *lru.Cache, event *cloudevents.Event) (bool, e
 		return false, err
 	}
 	fmt.Printf("CHECKING CACHE KEY %s\n", eventKey)
+	var cacheKeys []string
+	for _, ck := range cacheClient.Keys() {
+		cacheKeys = append(cacheKeys, fmt.Sprintf("%v", ck))
+	}
+	fmt.Printf("EXISTING KEYS: %s\n", strings.Join(cacheKeys, ", "))
 	return cacheClient.Contains(eventKey), nil
 }
 
