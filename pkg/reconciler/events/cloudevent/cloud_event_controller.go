@@ -143,10 +143,6 @@ func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error
 	cacheClient := cache.Get(ctx)
 	_, isRun := object.(*v1alpha1.Run)
 
-	eventKey, err := cache.EventKey(event)
-	if err != nil {
-		eventKey = "nothing to see here"
-	}
 	wasIn := make(chan error)
 	go func() {
 		wasIn <- nil
@@ -158,7 +154,7 @@ func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error
 				logger.Errorf("error while checking cache: %s", err)
 			}
 			if cloudEventSent {
-				logger.Infof("cloudevent %s already sent", eventKey)
+				logger.Infof("cloudevent %v already sent", event)
 				return
 			}
 		}
@@ -170,10 +166,10 @@ func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error
 			}
 			recorder.Event(object, corev1.EventTypeWarning, "Cloud Event Failure", result.Error())
 		}
-		logger.Infof("past sending event %s", eventKey)
+		logger.Infof("past sending event %s", event.Type())
 		// In case of Run event, add to the cache to avoid duplicate events
 		if isRun {
-			logger.Debugf("Caching sent cloudevent %s", eventKey)
+			logger.Debugf("Caching sent cloudevent %s", event.Type())
 			if err := cache.AddEventSentToCache(cacheClient, event); err != nil {
 				logger.Errorf("error while adding sent event to cache: %s", err)
 			}
