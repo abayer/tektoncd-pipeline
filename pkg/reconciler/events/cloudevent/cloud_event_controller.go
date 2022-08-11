@@ -168,6 +168,7 @@ func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error
 		}
 		// In case of Run event, add to the cache to avoid duplicate events
 		if isRun {
+			logger.Debugf("Caching sent cloudevent of type %s", event.Type())
 			if err := cache.AddEventSentToCache(cacheClient, event); err != nil {
 				logger.Errorf("error while adding sent event to cache: %s", err)
 			}
