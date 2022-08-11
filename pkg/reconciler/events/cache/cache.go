@@ -40,6 +40,7 @@ func AddEventSentToCache(cacheClient *lru.Cache, event *cloudevents.Event) error
 	if err != nil {
 		return err
 	}
+	fmt.Printf("GOT NEW CACHE KEY %s\n", eventKey)
 	cacheClient.Add(eventKey, nil)
 	return nil
 }
@@ -53,6 +54,7 @@ func IsCloudEventSent(cacheClient *lru.Cache, event *cloudevents.Event) (bool, e
 	if err != nil {
 		return false, err
 	}
+	fmt.Printf("CHECKING CACHE KEY %s\n", eventKey)
 	return cacheClient.Contains(eventKey), nil
 }
 
