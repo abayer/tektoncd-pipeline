@@ -566,7 +566,9 @@ func TestSendCloudEventWithRetries(t *testing.T) {
 		},
 		object: &v1beta1.TaskRun{
 			ObjectMeta: metav1.ObjectMeta{
-				SelfLink: "/taskruns/test1",
+				SelfLink:  "/taskruns/test1",
+				Name:      "foo",
+				Namespace: "bar",
 			},
 			Status: v1beta1.TaskRunStatus{Status: objectStatus},
 		},

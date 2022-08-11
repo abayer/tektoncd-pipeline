@@ -145,7 +145,7 @@ func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error
 
 	eventKey, err := cache.EventKey(event)
 	if err != nil {
-		return err
+		eventKey = "nothing to see here"
 	}
 	wasIn := make(chan error)
 	go func() {
