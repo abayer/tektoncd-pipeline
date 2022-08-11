@@ -166,6 +166,7 @@ func SendCloudEventWithRetries(ctx context.Context, object runtime.Object) error
 			}
 			recorder.Event(object, corev1.EventTypeWarning, "Cloud Event Failure", result.Error())
 		}
+		logger.Infof("past sending event %s", event.Type())
 		// In case of Run event, add to the cache to avoid duplicate events
 		if isRun {
 			logger.Debugf("Caching sent cloudevent of type %s", event.Type())
