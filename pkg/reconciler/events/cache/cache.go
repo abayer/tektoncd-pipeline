@@ -32,9 +32,11 @@ type eventData struct {
 
 // AddEventSentToCache adds the particular object to cache marking it as sent
 func AddEventSentToCache(cacheClient *lru.Cache, event *cloudevents.Event) error {
+	fmt.Println("ABOUT TO CACHE ATTEMPT")
 	if cacheClient == nil {
 		return errors.New("cache client is nil")
 	}
+	fmt.Println("ABOUT TO EVENTKEY")
 	eventKey, err := EventKey(event)
 	if err != nil {
 		return err
