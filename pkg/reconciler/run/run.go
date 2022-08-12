@@ -18,6 +18,7 @@ package run
 
 import (
 	"context"
+	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/tektoncd/pipeline/pkg/apis/config"
@@ -36,6 +37,7 @@ import (
 type Reconciler struct {
 	cloudEventClient cloudevent.CEClient
 	cacheClient      *lru.Cache
+	mutex            sync.Mutex
 }
 
 // Check that our Reconciler implements runreconciler.Interface
@@ -61,6 +63,9 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, run *v1alpha1.Run) pkgre
 		// Custom task controllers may be sending events for "Runs" associated
 		// to the custom tasks they control. To avoid sending duplicate events,
 		// CloudEvents for "Runs" are only sent when enabled
+
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
 
 		// Read and log the condition
 		condition := runEvents.Status.GetCondition(apis.ConditionSucceeded)
