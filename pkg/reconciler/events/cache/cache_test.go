@@ -146,7 +146,7 @@ func TestAddCheckEvent(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			testCache, _ := lru.New(10)
-			AddEventSentToCache(testCache, tc.firstEvent)
+			_, _ = IsCloudEventSent(testCache, tc.firstEvent)
 			found, _ := IsCloudEventSent(testCache, tc.secondEvent)
 			if d := cmp.Diff(tc.wantFound, found); d != "" {
 				t.Errorf("Cache check failure %s", diff.PrintWantGot(d))
