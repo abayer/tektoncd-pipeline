@@ -61,7 +61,7 @@ type ResolutionRequestSpec struct {
 	// resource being requested. For example: repo URL, commit SHA,
 	// path to file, the kind of authentication to leverage, etc.
 	// +optional
-	Parameters []ResolutionParam `json:"params,omitempty"`
+	Parameters map[string]string `json:"params,omitempty"`
 }
 
 // ResolutionRequestStatus are all the fields in a ResolutionRequest's
@@ -83,14 +83,4 @@ type ResolutionRequestStatusFields struct {
 // GetStatus implements KRShaped.
 func (rr *ResolutionRequest) GetStatus() *duckv1.Status {
 	return &rr.Status.Status
-}
-
-// ResolutionParam is a single parameter passed to a resolver.
-type ResolutionParam struct {
-	// Name is the name of the parameter that will be passed to the
-	// resolver.
-	Name string `json:"name"`
-	// Value is the string value of the parameter that will be
-	// passed to the resolver.
-	Value string `json:"value"`
 }

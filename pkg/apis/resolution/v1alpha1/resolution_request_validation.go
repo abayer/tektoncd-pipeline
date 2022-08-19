@@ -31,7 +31,7 @@ func (rr *ResolutionRequest) Validate(ctx context.Context) (errs *apis.FieldErro
 }
 
 // Validate checks the the spec field of a ResolutionRequest is valid.
-func (rs *ResolutionRequestSpec) Validate(ctx context.Context) *apis.FieldError {
+func (rs *ResolutionRequestSpec) Validate(ctx context.Context) (errs *apis.FieldError) {
 	return nil
 }
 
