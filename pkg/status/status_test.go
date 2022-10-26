@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	"github.com/tektoncd/pipeline/test"
@@ -126,9 +125,9 @@ status:
 func TestGetRunStatusForPipelineTask(t *testing.T) {
 	testCases := []struct {
 		name           string
-		run            *v1alpha1.Run
+		run            *v1beta1.CustomRun
 		childRef       v1beta1.ChildStatusReference
-		expectedStatus *v1alpha1.RunStatus
+		expectedStatus *v1beta1.CustomRunStatus
 		expectedErr    error
 	}{
 		{
@@ -139,19 +138,19 @@ func TestGetRunStatusForPipelineTask(t *testing.T) {
 				},
 				PipelineTaskName: "some-task",
 			},
-			expectedErr: errors.New("could not fetch status for PipelineTask some-task: should have kind Run, but is something-else"),
+			expectedErr: errors.New("could not fetch status for PipelineTask some-task: should have kind CustomRun, but is something-else"),
 		}, {
 			name: "run not found",
 			childRef: v1beta1.ChildStatusReference{
 				TypeMeta: runtime.TypeMeta{
-					Kind: "Run",
+					Kind: "CustomRun",
 				},
 				Name:             "some-run",
 				PipelineTaskName: "some-task",
 			},
 		}, {
 			name: "success",
-			run: parse.MustParseRun(t, `
+			run: parse.MustParseCustomRun(t, `
 metadata:
   name: some-run
 spec: {}
@@ -161,11 +160,11 @@ status:
     type: Succeeded
 `),
 			childRef: v1beta1.ChildStatusReference{
-				TypeMeta:         runtime.TypeMeta{Kind: "Run"},
+				TypeMeta:         runtime.TypeMeta{Kind: "CustomRun"},
 				Name:             "some-run",
 				PipelineTaskName: "some-task",
 			},
-			expectedStatus: &v1alpha1.RunStatus{
+			expectedStatus: &v1beta1.CustomRunStatus{
 				Status: duckv1.Status{
 					Conditions: duckv1.Conditions{{
 						Type:   apis.ConditionSucceeded,
@@ -181,7 +180,7 @@ status:
 			ctx, _ := ttesting.SetupFakeContext(t)
 			d := test.Data{}
 			if tc.run != nil {
-				d.Runs = []*v1alpha1.Run{tc.run}
+				d.CustomRuns = []*v1beta1.CustomRun{tc.run}
 			}
 			clients, _ := test.SeedTestData(t, ctx, d)
 
@@ -220,7 +219,7 @@ status:
     value: aResultValue
 `)
 
-	run1 := parse.MustParseRun(t, `
+	run1 := parse.MustParseCustomRun(t, `
 metadata:
   name: pr-run-1
 spec: {}
@@ -239,7 +238,7 @@ status:
 		name                string
 		originalPR          *v1beta1.PipelineRun
 		taskRuns            []*v1beta1.TaskRun
-		runs                []*v1alpha1.Run
+		runs                []*v1beta1.CustomRun
 		expectedTRStatuses  map[string]*v1beta1.PipelineRunTaskRunStatus
 		expectedRunStatuses map[string]*v1beta1.PipelineRunRunStatus
 		expectedErr         error
@@ -263,8 +262,8 @@ status:
     kind: TaskRun
     name: pr-task-1
     pipelineTaskName: task-1
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-run-1
     pipelineTaskName: run-1
   conditions:
@@ -274,7 +273,7 @@ status:
     type: Succeeded
 `),
 			taskRuns: []*v1beta1.TaskRun{tr1},
-			runs:     []*v1alpha1.Run{run1},
+			runs:     []*v1beta1.CustomRun{run1},
 			expectedTRStatuses: mustParseTaskRunStatusMap(t, `
 pr-task-1:
   pipelineTaskName: task-1
@@ -336,7 +335,7 @@ status:
     type: Succeeded
 `),
 			taskRuns: []*v1beta1.TaskRun{tr1},
-			runs:     []*v1alpha1.Run{run1},
+			runs:     []*v1beta1.CustomRun{run1},
 			expectedTRStatuses: mustParseTaskRunStatusMap(t, `
 pr-task-1:
   pipelineTaskName: task-1
@@ -396,8 +395,8 @@ status:
     kind: TaskRun
     name: pr-task-2
     pipelineTaskName: task-2
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-run-2
     pipelineTaskName: run-2
   conditions:
@@ -407,7 +406,7 @@ status:
     type: Succeeded
 `),
 			taskRuns: []*v1beta1.TaskRun{tr1},
-			runs:     []*v1alpha1.Run{run1},
+			runs:     []*v1beta1.CustomRun{run1},
 			expectedTRStatuses: mustParseTaskRunStatusMap(t, `
 pr-task-1:
   pipelineTaskName: task-1
@@ -445,8 +444,8 @@ status:
     kind: TaskRun
     name: pr-task-1
     pipelineTaskName: task-1
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-run-1
     pipelineTaskName: run-1
   conditions:
@@ -488,7 +487,7 @@ pr-run-1:
 				d.TaskRuns = tc.taskRuns
 			}
 			if len(tc.runs) > 0 {
-				d.Runs = tc.runs
+				d.CustomRuns = tc.runs
 			}
 
 			clients, _ := test.SeedTestData(t, ctx, d)

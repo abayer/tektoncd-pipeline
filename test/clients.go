@@ -65,6 +65,7 @@ type clients struct {
 	PipelineResourceClient  resourcev1alpha1.PipelineResourceInterface
 	RunClient               v1alpha1.RunInterface
 	ResolutionRequestclient resolutionv1alpha1.ResolutionRequestInterface
+	CustomRunClient         v1beta1.CustomRunInterface
 }
 
 // newClients instantiates and returns several clientsets required for making requests to the
@@ -106,5 +107,6 @@ func newClients(t *testing.T, configPath, clusterName, namespace string) *client
 	c.PipelineResourceClient = rcs.TektonV1alpha1().PipelineResources(namespace)
 	c.RunClient = cs.TektonV1alpha1().Runs(namespace)
 	c.ResolutionRequestclient = rrcs.ResolutionV1alpha1().ResolutionRequests(namespace)
+	c.CustomRunClient = cs.TektonV1beta1().CustomRuns(namespace)
 	return c
 }

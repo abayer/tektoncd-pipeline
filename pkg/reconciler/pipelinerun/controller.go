@@ -23,7 +23,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	pipelineclient "github.com/tektoncd/pipeline/pkg/client/injection/client"
-	runinformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1alpha1/run"
+	runinformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/customrun"
 	pipelineruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/pipelinerun"
 	taskruninformer "github.com/tektoncd/pipeline/pkg/client/injection/informers/pipeline/v1beta1/taskrun"
 	pipelinerunreconciler "github.com/tektoncd/pipeline/pkg/client/injection/reconciler/pipeline/v1beta1/pipelinerun"
@@ -63,7 +63,7 @@ func NewController(opts *pipeline.Options, clock clock.PassiveClock) func(contex
 			Clock:               clock,
 			pipelineRunLister:   pipelineRunInformer.Lister(),
 			taskRunLister:       taskRunInformer.Lister(),
-			runLister:           runInformer.Lister(),
+			customRunLister:     runInformer.Lister(),
 			resourceLister:      resourceInformer.Lister(),
 			cloudEventClient:    cloudeventclient.Get(ctx),
 			metrics:             pipelinerunmetrics.Get(ctx),

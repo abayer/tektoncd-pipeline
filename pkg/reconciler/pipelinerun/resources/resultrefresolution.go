@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 )
 
@@ -34,7 +33,7 @@ type ResolvedResultRef struct {
 	Value           v1beta1.ResultValue
 	ResultReference v1beta1.ResultRef
 	FromTaskRun     string
-	FromRun         string
+	FromCustomRun   string
 }
 
 // ResolveResultRef resolves any ResultReference that are found in the target ResolvedPipelineTask
@@ -150,13 +149,13 @@ func resolveResultRef(pipelineState PipelineRunState, resultRef *v1beta1.ResultR
 		return nil, resultRef.PipelineTask, fmt.Errorf("task %q referenced by result was not successful", referencedPipelineTask.PipelineTask.Name)
 	}
 
-	var runName, runValue, taskRunName string
+	var customRunName, customRunValue, taskRunName string
 	var resultValue v1beta1.ResultValue
 	var err error
 	if referencedPipelineTask.IsCustomTask() {
-		runName = referencedPipelineTask.Run.Name
-		runValue, err = findRunResultForParam(referencedPipelineTask.Run, resultRef)
-		resultValue = *v1beta1.NewStructuredValues(runValue)
+		customRunName = referencedPipelineTask.CustomRun.Name
+		customRunValue, err = findCustomRunResultForParam(referencedPipelineTask.CustomRun, resultRef)
+		resultValue = *v1beta1.NewStructuredValues(customRunValue)
 		if err != nil {
 			return nil, resultRef.PipelineTask, err
 		}
@@ -171,13 +170,13 @@ func resolveResultRef(pipelineState PipelineRunState, resultRef *v1beta1.ResultR
 	return &ResolvedResultRef{
 		Value:           resultValue,
 		FromTaskRun:     taskRunName,
-		FromRun:         runName,
+		FromCustomRun:   customRunName,
 		ResultReference: *resultRef,
 	}, "", nil
 }
 
-func findRunResultForParam(run *v1alpha1.Run, reference *v1beta1.ResultRef) (string, error) {
-	results := run.Status.Results
+func findCustomRunResultForParam(customRun *v1beta1.CustomRun, reference *v1beta1.ResultRef) (string, error) {
+	results := customRun.Status.Results
 	for _, result := range results {
 		if result.Name == reference.Result {
 			return result.Value, nil

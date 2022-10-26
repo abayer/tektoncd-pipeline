@@ -28,7 +28,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	_ "github.com/tektoncd/pipeline/pkg/pipelinerunmetrics/fake" // Make sure the pipelinerunmetrics are setup
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
@@ -44,7 +43,7 @@ func TestCancelPipelineRun(t *testing.T) {
 		embeddedStatus string
 		pipelineRun    *v1beta1.PipelineRun
 		taskRuns       []*v1beta1.TaskRun
-		runs           []*v1alpha1.Run
+		runs           []*v1beta1.CustomRun
 		wantErr        bool
 	}{{
 		name:           "no-resolved-taskrun",
@@ -124,7 +123,7 @@ func TestCancelPipelineRun(t *testing.T) {
 				},
 			}},
 		},
-		runs: []*v1alpha1.Run{
+		runs: []*v1beta1.CustomRun{
 			{ObjectMeta: metav1.ObjectMeta{Name: "t1"}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "t2"}},
 		},
@@ -143,7 +142,7 @@ func TestCancelPipelineRun(t *testing.T) {
 				},
 			}},
 		},
-		runs: []*v1alpha1.Run{
+		runs: []*v1beta1.CustomRun{
 			{ObjectMeta: metav1.ObjectMeta{Name: "t1"}},
 		},
 	}, {
@@ -183,7 +182,7 @@ func TestCancelPipelineRun(t *testing.T) {
 			{ObjectMeta: metav1.ObjectMeta{Name: "t1"}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "t2"}},
 		},
-		runs: []*v1alpha1.Run{
+		runs: []*v1beta1.CustomRun{
 			{ObjectMeta: metav1.ObjectMeta{Name: "r1"}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "r2"}},
 		},
@@ -223,7 +222,7 @@ func TestCancelPipelineRun(t *testing.T) {
 		taskRuns: []*v1beta1.TaskRun{
 			{ObjectMeta: metav1.ObjectMeta{Name: "t1"}},
 		},
-		runs: []*v1alpha1.Run{
+		runs: []*v1beta1.CustomRun{
 			{ObjectMeta: metav1.ObjectMeta{Name: "r2"}},
 		},
 	}, {
@@ -263,7 +262,7 @@ func TestCancelPipelineRun(t *testing.T) {
 			{ObjectMeta: metav1.ObjectMeta{Name: "t1"}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "t2"}},
 		},
-		runs: []*v1alpha1.Run{
+		runs: []*v1beta1.CustomRun{
 			{ObjectMeta: metav1.ObjectMeta{Name: "r1"}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "r2"}},
 		},
@@ -303,7 +302,7 @@ func TestCancelPipelineRun(t *testing.T) {
 		taskRuns: []*v1beta1.TaskRun{
 			{ObjectMeta: metav1.ObjectMeta{Name: "t2"}},
 		},
-		runs: []*v1alpha1.Run{
+		runs: []*v1beta1.CustomRun{
 			{ObjectMeta: metav1.ObjectMeta{Name: "r1"}},
 		},
 	}, {
@@ -331,7 +330,7 @@ func TestCancelPipelineRun(t *testing.T) {
 			d := test.Data{
 				PipelineRuns: []*v1beta1.PipelineRun{tc.pipelineRun},
 				TaskRuns:     tc.taskRuns,
-				Runs:         tc.runs,
+				CustomRuns:   tc.runs,
 			}
 			ctx, _ := ttesting.SetupFakeContext(t)
 			cfg := config.NewStore(logtesting.TestLogger(t))
@@ -372,14 +371,14 @@ func TestCancelPipelineRun(t *testing.T) {
 				}
 				if tc.runs != nil {
 					for _, expectedRun := range tc.runs {
-						r, err := c.Pipeline.TektonV1alpha1().Runs("").Get(ctx, expectedRun.Name, metav1.GetOptions{})
+						r, err := c.Pipeline.TektonV1beta1().CustomRuns("").Get(ctx, expectedRun.Name, metav1.GetOptions{})
 						if err != nil {
 							t.Fatalf("couldn't get expected Run %s, got error %s", expectedRun.Name, err)
 						}
-						if r.Spec.Status != v1alpha1.RunSpecStatusCancelled {
+						if r.Spec.Status != v1beta1.CustomRunSpecStatusCancelled {
 							t.Errorf("expected task %q to be marked as cancelled, was %q", r.Name, r.Spec.Status)
 						}
-						expectedStatusMessage := v1alpha1.RunCancelledByPipelineMsg
+						expectedStatusMessage := v1beta1.CustomRunCancelledByPipelineMsg
 						if r.Spec.StatusMessage != expectedStatusMessage {
 							t.Errorf("expected task %q to have status message %s but was %s", r.Name, expectedStatusMessage, r.Spec.StatusMessage)
 						}
@@ -460,8 +459,8 @@ func TestGetChildObjectsFromPRStatusForTaskNames(t *testing.T) {
 				},
 				ChildReferences: []v1beta1.ChildStatusReference{{
 					TypeMeta: runtime.TypeMeta{
-						APIVersion: "v1alpha1",
-						Kind:       "Run",
+						APIVersion: "v1beta1",
+						Kind:       "CustomRun",
 					},
 					Name:             "r1",
 					PipelineTaskName: "run-1",
@@ -479,8 +478,8 @@ func TestGetChildObjectsFromPRStatusForTaskNames(t *testing.T) {
 				},
 				ChildReferences: []v1beta1.ChildStatusReference{{
 					TypeMeta: runtime.TypeMeta{
-						APIVersion: "v1alpha1",
-						Kind:       "Run",
+						APIVersion: "v1beta1",
+						Kind:       "CustomRun",
 					},
 					Name:             "r1",
 					PipelineTaskName: "run-1",
@@ -498,8 +497,8 @@ func TestGetChildObjectsFromPRStatusForTaskNames(t *testing.T) {
 				},
 				ChildReferences: []v1beta1.ChildStatusReference{{
 					TypeMeta: runtime.TypeMeta{
-						APIVersion: "v1alpha1",
-						Kind:       "Run",
+						APIVersion: "v1beta1",
+						Kind:       "CustomRun",
 					},
 					Name:             "r1",
 					PipelineTaskName: "run-1",

@@ -27,7 +27,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/tektoncd/pipeline/pkg/apis/config"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	resourcev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/resource/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/reconciler/pipeline/dag"
@@ -45,8 +45,8 @@ import (
 	logtesting "knative.dev/pkg/logging/testing"
 )
 
-func nopGetRun(string) (*v1alpha1.Run, error) {
-	return nil, errors.New("GetRun should not be called")
+func nopGetCustomRun(string) (*v1beta1.CustomRun, error) {
+	return nil, errors.New("GetCustomRun should not be called")
 }
 func nopGetTask(context.Context, string) (v1beta1.TaskObject, error) {
 	return nil, errors.New("GetTask should not be called")
@@ -213,18 +213,18 @@ var trs = []v1beta1.TaskRun{{
 	Spec: v1beta1.TaskRunSpec{},
 }}
 
-var runs = []v1alpha1.Run{{
+var customRuns = []v1beta1.CustomRun{{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "namespace",
 		Name:      "pipelinerun-mytask13",
 	},
-	Spec: v1alpha1.RunSpec{},
+	Spec: v1beta1.CustomRunSpec{},
 }, {
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "namespace",
 		Name:      "pipelinerun-mytask14",
 	},
-	Spec: v1alpha1.RunSpec{},
+	Spec: v1beta1.CustomRunSpec{},
 }}
 
 var gitDeclaredResource = v1beta1.PipelineDeclaredResource{
@@ -258,10 +258,10 @@ func makeStarted(tr v1beta1.TaskRun) *v1beta1.TaskRun {
 	return newTr
 }
 
-func makeRunStarted(run v1alpha1.Run) *v1alpha1.Run {
-	newRun := newRun(run)
-	newRun.Status.Conditions[0].Status = corev1.ConditionUnknown
-	return newRun
+func makeCustomRunStarted(customRun v1beta1.CustomRun) *v1beta1.CustomRun {
+	newCustomRun := newCustomRun(customRun)
+	newCustomRun.Status.Conditions[0].Status = corev1.ConditionUnknown
+	return newCustomRun
 }
 
 func makeSucceeded(tr v1beta1.TaskRun) *v1beta1.TaskRun {
@@ -270,10 +270,10 @@ func makeSucceeded(tr v1beta1.TaskRun) *v1beta1.TaskRun {
 	return newTr
 }
 
-func makeRunSucceeded(run v1alpha1.Run) *v1alpha1.Run {
-	newRun := newRun(run)
-	newRun.Status.Conditions[0].Status = corev1.ConditionTrue
-	return newRun
+func makeCustomRunSucceeded(customRun v1beta1.CustomRun) *v1beta1.CustomRun {
+	newCustomRun := newCustomRun(customRun)
+	newCustomRun.Status.Conditions[0].Status = corev1.ConditionTrue
+	return newCustomRun
 }
 
 func makeFailed(tr v1beta1.TaskRun) *v1beta1.TaskRun {
@@ -282,10 +282,10 @@ func makeFailed(tr v1beta1.TaskRun) *v1beta1.TaskRun {
 	return newTr
 }
 
-func makeRunFailed(run v1alpha1.Run) *v1alpha1.Run {
-	newRun := newRun(run)
-	newRun.Status.Conditions[0].Status = corev1.ConditionFalse
-	return newRun
+func makeCustomRunFailed(customRun v1beta1.CustomRun) *v1beta1.CustomRun {
+	newCustomRun := newCustomRun(customRun)
+	newCustomRun.Status.Conditions[0].Status = corev1.ConditionFalse
+	return newCustomRun
 }
 
 func withCancelled(tr *v1beta1.TaskRun) *v1beta1.TaskRun {
@@ -299,15 +299,15 @@ func withCancelledForTimeout(tr *v1beta1.TaskRun) *v1beta1.TaskRun {
 	return tr
 }
 
-func withRunCancelled(run *v1alpha1.Run) *v1alpha1.Run {
-	run.Status.Conditions[0].Reason = v1alpha1.RunReasonCancelled
-	return run
+func withCustomRunCancelled(customRun *v1beta1.CustomRun) *v1beta1.CustomRun {
+	customRun.Status.Conditions[0].Reason = v1beta1.CustomRunReasonCancelled
+	return customRun
 }
 
-func withRunCancelledForTimeout(run *v1alpha1.Run) *v1alpha1.Run {
-	run.Spec.StatusMessage = v1alpha1.RunCancelledByPipelineTimeoutMsg
-	run.Status.Conditions[0].Reason = v1alpha1.RunReasonCancelled
-	return run
+func withRunCancelledForTimeout(customRun *v1beta1.CustomRun) *v1beta1.CustomRun {
+	customRun.Spec.StatusMessage = v1beta1.CustomRunCancelledByPipelineTimeoutMsg
+	customRun.Status.Conditions[0].Reason = v1beta1.CustomRunReasonCancelled
+	return customRun
 }
 
 func withCancelledBySpec(tr *v1beta1.TaskRun) *v1beta1.TaskRun {
@@ -315,9 +315,9 @@ func withCancelledBySpec(tr *v1beta1.TaskRun) *v1beta1.TaskRun {
 	return tr
 }
 
-func withRunCancelledBySpec(run *v1alpha1.Run) *v1alpha1.Run {
-	run.Spec.Status = v1alpha1.RunSpecStatusCancelled
-	return run
+func withCustomRunCancelledBySpec(customRun *v1beta1.CustomRun) *v1beta1.CustomRun {
+	customRun.Spec.Status = v1beta1.CustomRunSpecStatusCancelled
+	return customRun
 }
 
 func makeRetried(tr v1beta1.TaskRun) (newTr *v1beta1.TaskRun) {
@@ -338,8 +338,8 @@ func withRetries(tr *v1beta1.TaskRun) *v1beta1.TaskRun {
 	return tr
 }
 
-func withRunRetries(r *v1alpha1.Run) *v1alpha1.Run {
-	r.Status.RetriesStatus = []v1alpha1.RunStatus{{
+func withCustomRunRetries(cr *v1beta1.CustomRun) *v1beta1.CustomRun {
+	cr.Status.RetriesStatus = []v1beta1.CustomRunStatus{{
 		Status: duckv1.Status{
 			Conditions: []apis.Condition{{
 				Type:   apis.ConditionSucceeded,
@@ -347,7 +347,7 @@ func withRunRetries(r *v1alpha1.Run) *v1alpha1.Run {
 			}},
 		},
 	}}
-	return r
+	return cr
 }
 
 func newTaskRun(tr v1beta1.TaskRun) *v1beta1.TaskRun {
@@ -370,14 +370,14 @@ func withPipelineTaskRetries(pt v1beta1.PipelineTask, retries int) *v1beta1.Pipe
 	return &pt
 }
 
-func newRun(run v1alpha1.Run) *v1alpha1.Run {
-	return &v1alpha1.Run{
+func newCustomRun(cr v1beta1.CustomRun) *v1beta1.CustomRun {
+	return &v1beta1.CustomRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: run.Namespace,
-			Name:      run.Name,
+			Namespace: cr.Namespace,
+			Name:      cr.Name,
 		},
-		Spec: run.Spec,
-		Status: v1alpha1.RunStatus{
+		Spec: cr.Spec,
+		Status: v1beta1.CustomRunStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{{Type: apis.ConditionSucceeded}},
 			},
@@ -497,52 +497,52 @@ var allFinishedState = PipelineRunState{{
 	},
 }}
 
-var noRunStartedState = PipelineRunState{{
-	PipelineTask: &pts[12],
-	CustomTask:   true,
-	RunName:      "pipelinerun-mytask13",
-	Run:          nil,
+var noCustomRunStartedState = PipelineRunState{{
+	PipelineTask:  &pts[12],
+	CustomTask:    true,
+	CustomRunName: "pipelinerun-mytask13",
+	CustomRun:     nil,
 }, {
-	PipelineTask: &pts[13],
-	CustomTask:   true,
-	RunName:      "pipelinerun-mytask14",
-	Run:          nil,
+	PipelineTask:  &pts[13],
+	CustomTask:    true,
+	CustomRunName: "pipelinerun-mytask14",
+	CustomRun:     nil,
 }}
 
-var oneRunStartedState = PipelineRunState{{
-	PipelineTask: &pts[12],
-	CustomTask:   true,
-	RunName:      "pipelinerun-mytask13",
-	Run:          makeRunStarted(runs[0]),
+var oneCustomRunStartedState = PipelineRunState{{
+	PipelineTask:  &pts[12],
+	CustomTask:    true,
+	CustomRunName: "pipelinerun-mytask13",
+	CustomRun:     makeCustomRunStarted(customRuns[0]),
 }, {
-	PipelineTask: &pts[13],
-	CustomTask:   true,
-	RunName:      "pipelinerun-mytask14",
-	Run:          nil,
+	PipelineTask:  &pts[13],
+	CustomTask:    true,
+	CustomRunName: "pipelinerun-mytask14",
+	CustomRun:     nil,
 }}
 
-var oneRunFinishedState = PipelineRunState{{
-	PipelineTask: &pts[12],
-	CustomTask:   true,
-	RunName:      "pipelinerun-mytask13",
-	Run:          makeRunSucceeded(runs[0]),
+var oneCustomRunFinishedState = PipelineRunState{{
+	PipelineTask:  &pts[12],
+	CustomTask:    true,
+	CustomRunName: "pipelinerun-mytask13",
+	CustomRun:     makeCustomRunSucceeded(customRuns[0]),
 }, {
-	PipelineTask: &pts[13],
-	CustomTask:   true,
-	RunName:      "pipelinerun-mytask14",
-	Run:          nil,
+	PipelineTask:  &pts[13],
+	CustomTask:    true,
+	CustomRunName: "pipelinerun-mytask14",
+	CustomRun:     nil,
 }}
 
-var oneRunFailedState = PipelineRunState{{
-	PipelineTask: &pts[12],
-	CustomTask:   true,
-	RunName:      "pipelinerun-mytask13",
-	Run:          makeRunFailed(runs[0]),
+var oneCustomRunFailedState = PipelineRunState{{
+	PipelineTask:  &pts[12],
+	CustomTask:    true,
+	CustomRunName: "pipelinerun-mytask13",
+	CustomRun:     makeCustomRunFailed(customRuns[0]),
 }, {
-	PipelineTask: &pts[13],
-	CustomTask:   true,
-	RunName:      "pipelinerun-mytask14",
-	Run:          nil,
+	PipelineTask:  &pts[13],
+	CustomTask:    true,
+	CustomRunName: "pipelinerun-mytask14",
+	CustomRun:     nil,
 }}
 
 var taskCancelled = PipelineRunState{{
@@ -554,10 +554,10 @@ var taskCancelled = PipelineRunState{{
 	},
 }}
 
-var runCancelled = PipelineRunState{{
-	PipelineTask: &pts[12],
-	RunName:      "pipelinerun-mytask13",
-	Run:          withRunCancelled(newRun(runs[0])),
+var customRunCancelled = PipelineRunState{{
+	PipelineTask:  &pts[12],
+	CustomRunName: "pipelinerun-mytask13",
+	CustomRun:     withCustomRunCancelled(newCustomRun(customRuns[0])),
 }}
 
 var noneStartedStateMatrix = PipelineRunState{{
@@ -656,40 +656,40 @@ var allFinishedStateMatrix = PipelineRunState{{
 	},
 }}
 
-var noRunStartedStateMatrix = PipelineRunState{{
-	PipelineTask: &pts[18],
-	CustomTask:   true,
-	RunNames:     []string{"pipelinerun-mytask13"},
-	Runs:         nil,
+var noCustomRunStartedStateMatrix = PipelineRunState{{
+	PipelineTask:   &pts[18],
+	CustomTask:     true,
+	CustomRunNames: []string{"pipelinerun-mytask13"},
+	CustomRuns:     nil,
 }, {
-	PipelineTask: &pts[19],
-	CustomTask:   true,
-	RunNames:     []string{"pipelinerun-mytask13"},
-	Runs:         nil,
+	PipelineTask:   &pts[19],
+	CustomTask:     true,
+	CustomRunNames: []string{"pipelinerun-mytask13"},
+	CustomRuns:     nil,
 }}
 
-var oneRunStartedStateMatrix = PipelineRunState{{
-	PipelineTask: &pts[18],
-	CustomTask:   true,
-	RunNames:     []string{"pipelinerun-mytask13"},
-	Runs:         []*v1alpha1.Run{makeRunStarted(runs[0])},
+var oneCustomRunStartedStateMatrix = PipelineRunState{{
+	PipelineTask:   &pts[18],
+	CustomTask:     true,
+	CustomRunNames: []string{"pipelinerun-mytask13"},
+	CustomRuns:     []*v1beta1.CustomRun{makeCustomRunStarted(customRuns[0])},
 }, {
-	PipelineTask: &pts[19],
-	CustomTask:   true,
-	RunNames:     []string{"pipelinerun-mytask14"},
-	Runs:         nil,
+	PipelineTask:   &pts[19],
+	CustomTask:     true,
+	CustomRunNames: []string{"pipelinerun-mytask14"},
+	CustomRuns:     nil,
 }}
 
-var oneRunFailedStateMatrix = PipelineRunState{{
-	PipelineTask: &pts[18],
-	CustomTask:   true,
-	RunNames:     []string{"pipelinerun-mytask13"},
-	Runs:         []*v1alpha1.Run{makeRunFailed(runs[0])},
+var oneCustomRunFailedStateMatrix = PipelineRunState{{
+	PipelineTask:   &pts[18],
+	CustomTask:     true,
+	CustomRunNames: []string{"pipelinerun-mytask13"},
+	CustomRuns:     []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0])},
 }, {
-	PipelineTask: &pts[19],
-	CustomTask:   true,
-	RunNames:     []string{"pipelinerun-mytask14"},
-	Runs:         nil,
+	PipelineTask:   &pts[19],
+	CustomTask:     true,
+	CustomRunNames: []string{"pipelinerun-mytask14"},
+	CustomRuns:     nil,
 }}
 
 var taskCancelledMatrix = PipelineRunState{{
@@ -973,14 +973,14 @@ func TestIsSkipped(t *testing.T) {
 			"mytask12": false,
 		},
 	}, {
-		name:  "run-started",
-		state: oneRunStartedState,
+		name:  "customrun-started",
+		state: oneCustomRunStartedState,
 		expected: map[string]bool{
 			"mytask13": false,
 		},
 	}, {
-		name:  "run-cancelled",
-		state: runCancelled,
+		name:  "customrun-cancelled",
+		state: customRunCancelled,
 		expected: map[string]bool{
 			"mytask13": false,
 		},
@@ -1239,7 +1239,7 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "run not started",
+		name: "customrun not started",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
@@ -1254,11 +1254,11 @@ func TestIsFailure(t *testing.T) {
 		want: false,
 	}, {
 
-		name: "run running",
+		name: "customrun running",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
-			Run:          makeRunStarted(runs[0]),
+			CustomRun:    makeCustomRunStarted(customRuns[0]),
 		},
 		want: false,
 	}, {
@@ -1270,11 +1270,11 @@ func TestIsFailure(t *testing.T) {
 		want: false,
 	}, {
 
-		name: "run succeeded",
+		name: "customrun succeeded",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
-			Run:          makeRunSucceeded(runs[0]),
+			CustomRun:    makeCustomRunSucceeded(customRuns[0]),
 		},
 		want: false,
 	}, {
@@ -1286,11 +1286,11 @@ func TestIsFailure(t *testing.T) {
 		want: true,
 	}, {
 
-		name: "run failed",
+		name: "customrun failed",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
-			Run:          makeRunFailed(runs[0]),
+			CustomRun:    makeCustomRunFailed(customRuns[0]),
 		},
 		want: true,
 	}, {
@@ -1302,11 +1302,11 @@ func TestIsFailure(t *testing.T) {
 		want: false,
 	}, {
 
-		name: "run failed: retries remaining",
+		name: "customrun failed: retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
 			CustomTask:   true,
-			Run:          makeRunFailed(runs[0]),
+			CustomRun:    makeCustomRunFailed(customRuns[0]),
 		},
 		want: false,
 	}, {
@@ -1318,11 +1318,11 @@ func TestIsFailure(t *testing.T) {
 		want: true,
 	}, {
 
-		name: "run failed: no retries remaining",
+		name: "customrun failed: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
 			CustomTask:   true,
-			Run:          withRunRetries(makeRunFailed(runs[0])),
+			CustomRun:    withCustomRunRetries(makeCustomRunFailed(customRuns[0])),
 		},
 		want: true,
 	}, {
@@ -1347,10 +1347,10 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "run cancelled",
+		name: "customrun cancelled",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
-			Run:          withRunCancelled(makeRunFailed(runs[0])),
+			CustomRun:    withCustomRunCancelled(makeCustomRunFailed(customRuns[0])),
 			CustomTask:   true,
 		},
 		want: true,
@@ -1358,15 +1358,15 @@ func TestIsFailure(t *testing.T) {
 		name: "run cancelled for timeout",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
-			Run:          withRunCancelledForTimeout(makeRunFailed(runs[0])),
+			CustomRun:    withRunCancelledForTimeout(makeCustomRunFailed(customRuns[0])),
 			CustomTask:   true,
 		},
 		want: true,
 	}, {
-		name: "run cancelled but not failed",
+		name: "customrun cancelled but not failed",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
-			Run:          withRunCancelled(newRun(runs[0])),
+			CustomRun:    withCustomRunCancelled(newCustomRun(customRuns[0])),
 			CustomTask:   true,
 		},
 		want: false,
@@ -1378,10 +1378,10 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "run cancelled: retries remaining",
+		name: "customrun cancelled: retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
-			Run:          withRunCancelled(makeRunFailed(runs[0])),
+			CustomRun:    withCustomRunCancelled(makeCustomRunFailed(customRuns[0])),
 			CustomTask:   true,
 		},
 		want: true,
@@ -1393,10 +1393,10 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "run cancelled: no retries remaining",
+		name: "customrun cancelled: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
-			Run:          withRunCancelled(withRunRetries(makeRunFailed(runs[0]))),
+			CustomRun:    withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[0]))),
 			CustomTask:   true,
 		},
 		want: true,
@@ -1407,7 +1407,7 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs not started",
+		name: "matrixed customRuns not started",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
@@ -1421,11 +1421,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs running",
+		name: "matrixed customRuns running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunStarted(runs[0]), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunStarted(customRuns[0]), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -1436,11 +1436,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run running",
+		name: "one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunStarted(runs[0]), makeRunSucceeded(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunStarted(customRuns[0]), makeCustomRunSucceeded(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -1458,11 +1458,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run succeeded",
+		name: "one matrixed customrun succeeded",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunSucceeded(runs[0]), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunSucceeded(customRuns[0]), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -1473,11 +1473,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "matrixed runs failed",
+		name: "matrixed customRuns failed",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), makeRunFailed(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), makeCustomRunFailed(customRuns[1])},
 		},
 		want: true,
 	}, {
@@ -1488,11 +1488,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run failed, one matrixed run running",
+		name: "one matrixed customrun failed, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -1503,11 +1503,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs failed: retries remaining",
+		name: "matrixed customRuns failed: retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), makeRunFailed(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), makeCustomRunFailed(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -1518,11 +1518,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs failed: one run with retries remaining",
+		name: "matrixed customRuns failed: one customrun with retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), withRunRetries(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), withCustomRunRetries(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: false,
 	}, {
@@ -1533,11 +1533,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "matrixed runs failed: no retries remaining",
+		name: "matrixed customRuns failed: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunRetries(makeRunFailed(runs[0])), withRunRetries(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunRetries(makeCustomRunFailed(customRuns[0])), withCustomRunRetries(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: true,
 	}, {
@@ -1548,11 +1548,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "matrixed runs cancelled",
+		name: "matrixed customRuns cancelled",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), withRunCancelled(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), withCustomRunCancelled(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: true,
 	}, {
@@ -1563,11 +1563,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run cancelled, one matrixed run running",
+		name: "one matrixed customrun cancelled, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -1578,11 +1578,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs cancelled but not failed",
+		name: "matrixed customRuns cancelled but not failed",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(newRun(runs[0])), withRunCancelled(newRun(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(newCustomRun(customRuns[0])), withCustomRunCancelled(newCustomRun(customRuns[1]))},
 		},
 		want: false,
 	}, {
@@ -1593,11 +1593,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run cancelled but not failed",
+		name: "one matrixed customrun cancelled but not failed",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(newRun(runs[0])), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(newCustomRun(customRuns[0])), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -1608,11 +1608,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "matrixed runs cancelled: retries remaining",
+		name: "matrixed customRuns cancelled: retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), withRunCancelled(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), withCustomRunCancelled(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: true,
 	}, {
@@ -1623,11 +1623,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run cancelled: retries remaining, one matrixed run running",
+		name: "one matrixed customrun cancelled: retries remaining, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -1638,11 +1638,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "matrixed runs cancelled: no retries remaining",
+		name: "matrixed customRuns cancelled: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(withRunRetries(makeRunFailed(runs[0]))), withRunCancelled(withRunRetries(makeRunFailed(runs[1])))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[0]))), withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[1])))},
 		},
 		want: true,
 	}, {
@@ -1653,11 +1653,11 @@ func TestIsFailure(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run cancelled: no retries remaining, one matrixed run running",
+		name: "one matrixed customrun cancelled: no retries remaining, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(withRunRetries(makeRunFailed(runs[0]))), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[0]))), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}} {
@@ -1965,13 +1965,13 @@ func TestResolvePipelineRun(t *testing.T) {
 		},
 	}
 	// The Task "task" doesn't actually take any inputs or outputs, but validating
-	// that is not done as part of Run resolution
+	// that is not done as part of CustomRun resolution
 	getTask := func(ctx context.Context, name string) (v1beta1.TaskObject, error) { return task, nil }
 	getTaskRun := func(name string) (*v1beta1.TaskRun, error) { return nil, nil }
 
 	pipelineState := PipelineRunState{}
 	for _, task := range p.Spec.Tasks {
-		ps, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetRun, task, providedResources)
+		ps, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetCustomRun, task, providedResources)
 		if err != nil {
 			t.Fatalf("Error getting tasks for fake pipeline %s: %s", p.ObjectMeta.Name, err)
 		}
@@ -2044,18 +2044,18 @@ func TestResolvePipelineRun_CustomTask(t *testing.T) {
 			},
 		},
 	}, {
-		Name:    "run-exists",
+		Name:    "customrun-exists",
 		TaskRef: &v1beta1.TaskRef{APIVersion: "example.dev/v0", Kind: "Example"},
 	}}
 	pr := v1beta1.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{Name: "pipelinerun"},
 	}
-	run := &v1alpha1.Run{ObjectMeta: metav1.ObjectMeta{Name: "run-exists-abcde"}}
-	getRun := func(name string) (*v1alpha1.Run, error) {
-		if name == "pipelinerun-run-exists" {
+	run := &v1beta1.CustomRun{ObjectMeta: metav1.ObjectMeta{Name: "customrun-exists-abcde"}}
+	getCustomRun := func(name string) (*v1beta1.CustomRun, error) {
+		if name == "pipelinerun-customrun-exists" {
 			return run, nil
 		}
-		return nil, kerrors.NewNotFound(v1beta1.Resource("run"), name)
+		return nil, kerrors.NewNotFound(v1beta1.Resource("customrun"), name)
 	}
 	pipelineState := PipelineRunState{}
 	ctx := context.Background()
@@ -2068,7 +2068,7 @@ func TestResolvePipelineRun_CustomTask(t *testing.T) {
 	})
 	ctx = cfg.ToContext(ctx)
 	for _, task := range pts {
-		ps, err := ResolvePipelineTask(ctx, pr, nopGetTask, nopGetTaskRun, getRun, task, nil)
+		ps, err := ResolvePipelineTask(ctx, pr, nopGetTask, nopGetTaskRun, getCustomRun, task, nil)
 		if err != nil {
 			t.Fatalf("ResolvePipelineTask: %v", err)
 		}
@@ -2076,20 +2076,20 @@ func TestResolvePipelineRun_CustomTask(t *testing.T) {
 	}
 
 	expectedState := PipelineRunState{{
-		PipelineTask: &pts[0],
-		CustomTask:   true,
-		RunName:      "pipelinerun-customtask",
-		Run:          nil,
+		PipelineTask:  &pts[0],
+		CustomTask:    true,
+		CustomRunName: "pipelinerun-customtask",
+		CustomRun:     nil,
 	}, {
-		PipelineTask: &pts[1],
-		CustomTask:   true,
-		RunName:      "pipelinerun-customtask-spec",
-		Run:          nil,
+		PipelineTask:  &pts[1],
+		CustomTask:    true,
+		CustomRunName: "pipelinerun-customtask-spec",
+		CustomRun:     nil,
 	}, {
-		PipelineTask: &pts[2],
-		CustomTask:   true,
-		RunName:      "pipelinerun-run-exists",
-		Run:          run,
+		PipelineTask:  &pts[2],
+		CustomTask:    true,
+		CustomRunName: "pipelinerun-customrun-exists",
+		CustomRun:     run,
 	}}
 	if d := cmp.Diff(expectedState, pipelineState); d != "" {
 		t.Errorf("Unexpected pipeline state: %s", diff.PrintWantGot(d))
@@ -2118,7 +2118,7 @@ func TestResolvePipelineRun_PipelineTaskHasNoResources(t *testing.T) {
 	}
 	pipelineState := PipelineRunState{}
 	for _, task := range pts {
-		ps, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetRun, task, providedResources)
+		ps, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetCustomRun, task, providedResources)
 		if err != nil {
 			t.Errorf("Error getting tasks for fake pipeline %s: %s", p.ObjectMeta.Name, err)
 		}
@@ -2172,7 +2172,7 @@ func TestResolvePipelineRun_TaskDoesntExist(t *testing.T) {
 		},
 	}
 	for _, pt := range pts {
-		_, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetRun, pt, providedResources)
+		_, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetCustomRun, pt, providedResources)
 		switch err := err.(type) {
 		case nil:
 			t.Fatalf("Expected error getting non-existent Tasks for Pipeline %s but got none", p.Name)
@@ -2240,7 +2240,7 @@ func TestResolvePipelineRun_ResourceBindingsDontExist(t *testing.T) {
 				},
 			}
 			pipelineState := PipelineRunState{}
-			ps, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetRun, tt.p.Spec.Tasks[0], providedResources)
+			ps, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetCustomRun, tt.p.Spec.Tasks[0], providedResources)
 			if err == nil {
 				t.Fatalf("Expected error when bindings are in incorrect state for Pipeline %s but got none: %s", p.ObjectMeta.Name, err)
 			}
@@ -2298,10 +2298,10 @@ func TestResolvePipelineRun_withExistingTaskRuns(t *testing.T) {
 	}
 
 	// The Task "task" doesn't actually take any inputs or outputs, but validating
-	// that is not done as part of Run resolution
+	// that is not done as part of CustomRun resolution
 	getTask := func(_ context.Context, name string) (v1beta1.TaskObject, error) { return task, nil }
 	getTaskRun := func(name string) (*v1beta1.TaskRun, error) { return nil, nil }
-	resolvedTask, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetRun, p.Spec.Tasks[0], providedResources)
+	resolvedTask, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetCustomRun, p.Spec.Tasks[0], providedResources)
 	if err != nil {
 		t.Fatalf("Error getting tasks for fake pipeline %s: %s", p.ObjectMeta.Name, err)
 	}
@@ -2368,7 +2368,7 @@ func TestResolvedPipelineRun_PipelineTaskHasOptionalResources(t *testing.T) {
 	}
 	getTaskRun := func(name string) (*v1beta1.TaskRun, error) { return nil, nil }
 
-	actualTask, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetRun, p.Spec.Tasks[0], providedResources)
+	actualTask, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetCustomRun, p.Spec.Tasks[0], providedResources)
 	if err != nil {
 		t.Fatalf("Error getting tasks for fake pipeline %s: %s", p.ObjectMeta.Name, err)
 	}
@@ -2720,7 +2720,7 @@ func TestResolvePipeline_WhenExpressions(t *testing.T) {
 	}
 
 	t.Run("When Expressions exist", func(t *testing.T) {
-		_, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetRun, pt, providedResources)
+		_, err := ResolvePipelineTask(context.Background(), pr, getTask, getTaskRun, nopGetCustomRun, pt, providedResources)
 		if err != nil {
 			t.Fatalf("Did not expect error when resolving PipelineRun: %v", err)
 		}
@@ -2735,7 +2735,7 @@ func TestIsCustomTask(t *testing.T) {
 	}
 	getTask := func(ctx context.Context, name string) (v1beta1.TaskObject, error) { return task, nil }
 	getTaskRun := func(name string) (*v1beta1.TaskRun, error) { return nil, nil }
-	getRun := func(name string) (*v1alpha1.Run, error) { return nil, nil }
+	getCustomRun := func(name string) (*v1beta1.CustomRun, error) { return nil, nil }
 
 	for _, tc := range []struct {
 		name string
@@ -2841,7 +2841,7 @@ func TestIsCustomTask(t *testing.T) {
 				},
 			})
 			ctx = cfg.ToContext(ctx)
-			rpt, err := ResolvePipelineTask(ctx, pr, getTask, getTaskRun, getRun, tc.pt, nil)
+			rpt, err := ResolvePipelineTask(ctx, pr, getTask, getTaskRun, getCustomRun, tc.pt, nil)
 			if err != nil {
 				t.Fatalf("Did not expect error when resolving PipelineRun: %v", err)
 			}
@@ -3391,14 +3391,14 @@ func TestGetNamesOfTaskRuns(t *testing.T) {
 	}
 }
 
-func TestGetNamesOfRuns(t *testing.T) {
+func TestGetNamesOfCustomRuns(t *testing.T) {
 	prName := "mypipelinerun"
 	childRefs := []v1beta1.ChildStatusReference{{
-		TypeMeta:         runtime.TypeMeta{Kind: "Run"},
+		TypeMeta:         runtime.TypeMeta{Kind: pipeline.CustomRunControllerName},
 		Name:             "mypipelinerun-mytask-0",
 		PipelineTaskName: "mytask",
 	}, {
-		TypeMeta:         runtime.TypeMeta{Kind: "Run"},
+		TypeMeta:         runtime.TypeMeta{Kind: pipeline.CustomRunControllerName},
 		Name:             "mypipelinerun-mytask-1",
 		PipelineTaskName: "mytask",
 	}}
@@ -3409,11 +3409,11 @@ func TestGetNamesOfRuns(t *testing.T) {
 		prName       string
 		wantRunNames []string
 	}{{
-		name:         "existing runs",
+		name:         "existing customRuns",
 		ptName:       "mytask",
 		wantRunNames: []string{"mypipelinerun-mytask-0", "mypipelinerun-mytask-1"},
 	}, {
-		name:         "new runs",
+		name:         "new customRuns",
 		ptName:       "mynewtask",
 		wantRunNames: []string{"mypipelinerun-mynewtask-0", "mypipelinerun-mynewtask-1"},
 	}, {
@@ -3424,7 +3424,7 @@ func TestGetNamesOfRuns(t *testing.T) {
 			"mypipelinerunab643c1924b632f050e5a07fe482fc25-longtask-01234567",
 		},
 	}, {
-		name:   "new runs, pipelinerun with long name",
+		name:   "new customRuns, pipelinerun with long name",
 		ptName: "task3",
 		prName: "pipeline-run-0123456789-0123456789-0123456789-0123456789",
 		wantRunNames: []string{
@@ -3432,7 +3432,7 @@ func TestGetNamesOfRuns(t *testing.T) {
 			"pipeline-run-01234567891276ed292277c9bebded38d907a517fe-task3-1",
 		},
 	}, {
-		name:   "new runs, pipelinetask and pipelinerun with long name",
+		name:   "new customRuns, pipelinetask and pipelinerun with long name",
 		ptName: "task2-0123456789-0123456789-0123456789-0123456789-0123456789",
 		prName: "pipeline-run-0123456789-0123456789-0123456789-0123456789",
 		wantRunNames: []string{
@@ -3445,25 +3445,25 @@ func TestGetNamesOfRuns(t *testing.T) {
 			if tc.prName != "" {
 				testPrName = tc.prName
 			}
-			namesOfRunsFromChildRefs := getNamesOfRuns(childRefs, tc.ptName, testPrName, 2)
+			namesOfRunsFromChildRefs := getNamesOfCustomRuns(childRefs, tc.ptName, testPrName, 2)
 			sort.Strings(namesOfRunsFromChildRefs)
 			if d := cmp.Diff(tc.wantRunNames, namesOfRunsFromChildRefs); d != "" {
-				t.Errorf("getRunName: %s", diff.PrintWantGot(d))
+				t.Errorf("getCustomRunName: %s", diff.PrintWantGot(d))
 			}
 		})
 	}
 }
 
-func TestGetRunName(t *testing.T) {
+func TestGetCustomRunName(t *testing.T) {
 	prName := "pipeline-run"
-	runsStatus := map[string]*v1beta1.PipelineRunRunStatus{
-		"run-for-task1": {
+	customRunsStatus := map[string]*v1beta1.PipelineRunRunStatus{
+		"customrun-for-task1": {
 			PipelineTaskName: "task1",
 		},
 	}
 	childRefs := []v1beta1.ChildStatusReference{{
-		TypeMeta:         runtime.TypeMeta{Kind: "Run"},
-		Name:             "run-for-task1",
+		TypeMeta:         runtime.TypeMeta{Kind: pipeline.CustomRunControllerName},
+		Name:             "customrun-for-task1",
 		PipelineTaskName: "task1",
 	}}
 
@@ -3473,24 +3473,24 @@ func TestGetRunName(t *testing.T) {
 		prName     string
 		wantTrName string
 	}{{
-		name:       "existing run",
+		name:       "existing customrun",
 		ptName:     "task1",
-		wantTrName: "run-for-task1",
+		wantTrName: "customrun-for-task1",
 	}, {
-		name:       "new run",
+		name:       "new customrun",
 		ptName:     "task2",
 		wantTrName: "pipeline-run-task2",
 	}, {
-		name:       "new run with long name",
+		name:       "new customrun with long name",
 		ptName:     "task2-12345678901234567890123456789012345678901234567890",
 		wantTrName: "pipeline-run155b61773fd25b1fbd46dba34cd7cbeb-task2-123456789012",
 	}, {
-		name:       "new run, pr with long name",
+		name:       "new customrun, pr with long name",
 		ptName:     "task2",
 		prName:     "pipeline-run-12345678901234567890123456789012345678901234567890",
 		wantTrName: "pipeline-run-123456789012f022e3ec9d06c5795de718d2f11bdd71-task2",
 	}, {
-		name:       "new run, run and pr with long name",
+		name:       "new customrun, customrun and pr with long name",
 		ptName:     "task2-12345678901234567890123456789012345678901234567890",
 		prName:     "pipeline-run-1234567890123456789012345678901234567890",
 		wantTrName: "pipeline-run-1234567890123456782725b0120d3afbb59a451b67da5eb51c",
@@ -3500,15 +3500,15 @@ func TestGetRunName(t *testing.T) {
 			if tc.prName != "" {
 				testPrName = tc.prName
 			}
-			rnFromRunsStatus := getRunName(runsStatus, nil, tc.ptName, testPrName)
+			rnFromRunsStatus := getCustomRunName(customRunsStatus, nil, tc.ptName, testPrName)
 			if d := cmp.Diff(tc.wantTrName, rnFromRunsStatus); d != "" {
 				t.Errorf("GetTaskRunName: %s", diff.PrintWantGot(d))
 			}
-			rnFromChildRefs := getRunName(nil, childRefs, tc.ptName, testPrName)
+			rnFromChildRefs := getCustomRunName(nil, childRefs, tc.ptName, testPrName)
 			if d := cmp.Diff(tc.wantTrName, rnFromChildRefs); d != "" {
 				t.Errorf("GetTaskRunName: %s", diff.PrintWantGot(d))
 			}
-			rnFromBoth := getRunName(runsStatus, childRefs, tc.ptName, testPrName)
+			rnFromBoth := getCustomRunName(customRunsStatus, childRefs, tc.ptName, testPrName)
 			if d := cmp.Diff(tc.wantTrName, rnFromBoth); d != "" {
 				t.Errorf("GetTaskRunName: %s", diff.PrintWantGot(d))
 			}
@@ -3524,7 +3524,7 @@ func TestIsMatrixed(t *testing.T) {
 	}
 	getTask := func(ctx context.Context, name string) (v1beta1.TaskObject, error) { return task, nil }
 	getTaskRun := func(name string) (*v1beta1.TaskRun, error) { return &trs[0], nil }
-	getRun := func(name string) (*v1alpha1.Run, error) { return &runs[0], nil }
+	getCustomRun := func(name string) (*v1beta1.CustomRun, error) { return &customRuns[0], nil }
 
 	for _, tc := range []struct {
 		name string
@@ -3585,7 +3585,7 @@ func TestIsMatrixed(t *testing.T) {
 				},
 			})
 			ctx = cfg.ToContext(ctx)
-			rpt, err := ResolvePipelineTask(ctx, pr, getTask, getTaskRun, getRun, tc.pt, nil)
+			rpt, err := ResolvePipelineTask(ctx, pr, getTask, getTaskRun, getCustomRun, tc.pt, nil)
 			if err != nil {
 				t.Fatalf("Did not expect error when resolving PipelineRun: %v", err)
 			}
@@ -3658,7 +3658,7 @@ func TestResolvePipelineRunTask_WithMatrix(t *testing.T) {
 
 	getTask := func(ctx context.Context, name string) (v1beta1.TaskObject, error) { return task, nil }
 	getTaskRun := func(name string) (*v1beta1.TaskRun, error) { return taskRunsMap[name], nil }
-	getRun := func(name string) (*v1alpha1.Run, error) { return &runs[0], nil }
+	getCustomRun := func(name string) (*v1beta1.CustomRun, error) { return &customRuns[0], nil }
 
 	for _, tc := range []struct {
 		name string
@@ -3693,7 +3693,7 @@ func TestResolvePipelineRunTask_WithMatrix(t *testing.T) {
 				},
 			})
 			ctx = cfg.ToContext(ctx)
-			rpt, err := ResolvePipelineTask(ctx, pr, getTask, getTaskRun, getRun, tc.pt, nil)
+			rpt, err := ResolvePipelineTask(ctx, pr, getTask, getTaskRun, getCustomRun, tc.pt, nil)
 			if err != nil {
 				t.Fatalf("Did not expect error when resolving PipelineRun: %v", err)
 			}
@@ -3714,19 +3714,19 @@ func TestResolvePipelineRunTask_WithMatrixedCustomTask(t *testing.T) {
 		},
 	}
 
-	var runs []*v1alpha1.Run
-	var runNames []string
-	runsMap := map[string]*v1alpha1.Run{}
+	var customRuns []*v1beta1.CustomRun
+	var customRunNames []string
+	customRunsMap := map[string]*v1beta1.CustomRun{}
 	for i := 0; i < 9; i++ {
-		runName := fmt.Sprintf("%s-%s-%d", pipelineRunName, pipelineTaskName, i)
-		run := &v1alpha1.Run{
+		customRunName := fmt.Sprintf("%s-%s-%d", pipelineRunName, pipelineTaskName, i)
+		customRun := &v1beta1.CustomRun{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: runName,
+				Name: customRunName,
 			},
 		}
-		runs = append(runs, run)
-		runNames = append(runNames, runName)
-		runsMap[runName] = run
+		customRuns = append(customRuns, customRun)
+		customRunNames = append(customRunNames, customRunName)
+		customRunsMap[customRunName] = customRun
 	}
 
 	pts := []v1beta1.PipelineTask{{
@@ -3760,42 +3760,42 @@ func TestResolvePipelineRunTask_WithMatrixedCustomTask(t *testing.T) {
 
 	getTask := func(ctx context.Context, name string) (v1beta1.TaskObject, error) { return task, nil }
 	getTaskRun := func(name string) (*v1beta1.TaskRun, error) { return &trs[0], nil }
-	getRun := func(name string) (*v1alpha1.Run, error) { return runsMap[name], nil }
+	getCustomRun := func(name string) (*v1beta1.CustomRun, error) { return customRunsMap[name], nil }
 
 	for _, tc := range []struct {
-		name   string
-		pt     v1beta1.PipelineTask
-		getRun GetRun
-		want   *ResolvedPipelineTask
+		name         string
+		pt           v1beta1.PipelineTask
+		getCustomRun GetCustomRun
+		want         *ResolvedPipelineTask
 	}{{
 		name: "custom task with matrix - single parameter",
 		pt:   pts[0],
 		want: &ResolvedPipelineTask{
-			CustomTask:   true,
-			RunNames:     runNames[:3],
-			Runs:         runs[:3],
-			PipelineTask: &pts[0],
+			CustomTask:     true,
+			CustomRunNames: customRunNames[:3],
+			CustomRuns:     customRuns[:3],
+			PipelineTask:   &pts[0],
 		},
 	}, {
 		name: "custom task with matrix - multiple parameters",
 		pt:   pts[1],
 		want: &ResolvedPipelineTask{
-			CustomTask:   true,
-			RunNames:     runNames,
-			Runs:         runs,
-			PipelineTask: &pts[1],
+			CustomTask:     true,
+			CustomRunNames: customRunNames,
+			CustomRuns:     customRuns,
+			PipelineTask:   &pts[1],
 		},
 	}, {
 		name: "custom task with matrix - nil run",
 		pt:   pts[1],
-		getRun: func(name string) (*v1alpha1.Run, error) {
+		getCustomRun: func(name string) (*v1beta1.CustomRun, error) {
 			return nil, kerrors.NewNotFound(v1beta1.Resource("run"), name)
 		},
 		want: &ResolvedPipelineTask{
-			CustomTask:   true,
-			RunNames:     runNames,
-			Runs:         nil,
-			PipelineTask: &pts[1],
+			CustomTask:     true,
+			CustomRunNames: customRunNames,
+			CustomRuns:     nil,
+			PipelineTask:   &pts[1],
 		},
 	}} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -3808,10 +3808,10 @@ func TestResolvePipelineRunTask_WithMatrixedCustomTask(t *testing.T) {
 				},
 			})
 			ctx = cfg.ToContext(ctx)
-			if tc.getRun == nil {
-				tc.getRun = getRun
+			if tc.getCustomRun == nil {
+				tc.getCustomRun = getCustomRun
 			}
-			rpt, err := ResolvePipelineTask(ctx, pr, getTask, getTaskRun, tc.getRun, tc.pt, nil)
+			rpt, err := ResolvePipelineTask(ctx, pr, getTask, getTaskRun, tc.getCustomRun, tc.pt, nil)
 			if err != nil {
 				t.Fatalf("Did not expect error when resolving PipelineRun: %v", err)
 			}
@@ -3834,7 +3834,7 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "run not started",
+		name: "customrun not started",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
@@ -3849,11 +3849,11 @@ func TestIsSuccessful(t *testing.T) {
 		want: false,
 	}, {
 
-		name: "run running",
+		name: "customrun running",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
-			Run:          makeRunStarted(runs[0]),
+			CustomRun:    makeCustomRunStarted(customRuns[0]),
 		},
 		want: false,
 	}, {
@@ -3865,11 +3865,11 @@ func TestIsSuccessful(t *testing.T) {
 		want: true,
 	}, {
 
-		name: "run succeeded",
+		name: "customrun succeeded",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
-			Run:          makeRunSucceeded(runs[0]),
+			CustomRun:    makeCustomRunSucceeded(customRuns[0]),
 		},
 		want: true,
 	}, {
@@ -3881,11 +3881,11 @@ func TestIsSuccessful(t *testing.T) {
 		want: false,
 	}, {
 
-		name: "run failed",
+		name: "customrun failed",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
-			Run:          makeRunFailed(runs[0]),
+			CustomRun:    makeCustomRunFailed(customRuns[0]),
 		},
 		want: false,
 	}, {
@@ -3897,11 +3897,11 @@ func TestIsSuccessful(t *testing.T) {
 		want: false,
 	}, {
 
-		name: "run failed: retries remaining",
+		name: "customrun failed: retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
 			CustomTask:   true,
-			Run:          makeRunFailed(runs[0]),
+			CustomRun:    makeCustomRunFailed(customRuns[0]),
 		},
 		want: false,
 	}, {
@@ -3913,11 +3913,11 @@ func TestIsSuccessful(t *testing.T) {
 		want: false,
 	}, {
 
-		name: "run failed: no retries remaining",
+		name: "customrun failed: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
 			CustomTask:   true,
-			Run:          withRunRetries(makeRunFailed(runs[0])),
+			CustomRun:    withCustomRunRetries(makeCustomRunFailed(customRuns[0])),
 		},
 		want: false,
 	}, {
@@ -3935,18 +3935,18 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "run cancelled",
+		name: "customrun cancelled",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
-			Run:          withRunCancelled(makeRunFailed(runs[0])),
+			CustomRun:    withCustomRunCancelled(makeCustomRunFailed(customRuns[0])),
 			CustomTask:   true,
 		},
 		want: false,
 	}, {
-		name: "run cancelled but not failed",
+		name: "customrun cancelled but not failed",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
-			Run:          withRunCancelled(newRun(runs[0])),
+			CustomRun:    withCustomRunCancelled(newCustomRun(customRuns[0])),
 			CustomTask:   true,
 		},
 		want: false,
@@ -3958,10 +3958,10 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "run cancelled: retries remaining",
+		name: "customrun cancelled: retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
-			Run:          withRunCancelled(makeRunFailed(runs[0])),
+			CustomRun:    withCustomRunCancelled(makeCustomRunFailed(customRuns[0])),
 			CustomTask:   true,
 		},
 		want: false,
@@ -3973,10 +3973,10 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "run cancelled: no retries remaining",
+		name: "customrun cancelled: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
-			Run:          withRunCancelled(withRunRetries(makeRunFailed(runs[0]))),
+			CustomRun:    withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[0]))),
 			CustomTask:   true,
 		},
 		want: false,
@@ -3987,7 +3987,7 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs not started",
+		name: "matrixed customRuns not started",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
@@ -4001,11 +4001,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs running",
+		name: "matrixed customRuns running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunStarted(runs[0]), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunStarted(customRuns[0]), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4016,11 +4016,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run running",
+		name: "one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunStarted(runs[0]), makeRunSucceeded(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunStarted(customRuns[0]), makeCustomRunSucceeded(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4031,11 +4031,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "matrixed runs succeeded",
+		name: "matrixed customRuns succeeded",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunSucceeded(runs[0]), makeRunSucceeded(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunSucceeded(customRuns[0]), makeCustomRunSucceeded(customRuns[1])},
 		},
 		want: true,
 	}, {
@@ -4046,11 +4046,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run succeeded",
+		name: "one matrixed customrun succeeded",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunSucceeded(runs[0]), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunSucceeded(customRuns[0]), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4061,11 +4061,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs failed",
+		name: "matrixed customRuns failed",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), makeRunFailed(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), makeCustomRunFailed(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4076,11 +4076,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run failed, one matrixed run running",
+		name: "one matrixed customrun failed, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4091,11 +4091,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs failed: retries remaining",
+		name: "matrixed customRuns failed: retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), makeRunFailed(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), makeCustomRunFailed(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4106,11 +4106,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs failed: one run with retries remaining",
+		name: "matrixed customRuns failed: one customrun with retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), withRunRetries(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), withCustomRunRetries(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: false,
 	}, {
@@ -4121,11 +4121,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs failed: no retries remaining",
+		name: "matrixed customRuns failed: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunRetries(makeRunFailed(runs[0])), withRunRetries(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunRetries(makeCustomRunFailed(customRuns[0])), withCustomRunRetries(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: false,
 	}, {
@@ -4136,11 +4136,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs cancelled",
+		name: "matrixed customRuns cancelled",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), withRunCancelled(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), withCustomRunCancelled(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: false,
 	}, {
@@ -4151,11 +4151,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run cancelled, one matrixed run running",
+		name: "one matrixed customrun cancelled, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4166,11 +4166,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs cancelled but not failed",
+		name: "matrixed customRuns cancelled but not failed",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(newRun(runs[0])), withRunCancelled(newRun(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(newCustomRun(customRuns[0])), withCustomRunCancelled(newCustomRun(customRuns[1]))},
 		},
 		want: false,
 	}, {
@@ -4181,11 +4181,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run cancelled but not failed",
+		name: "one matrixed customrun cancelled but not failed",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(newRun(runs[0])), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(newCustomRun(customRuns[0])), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4196,11 +4196,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs cancelled: retries remaining",
+		name: "matrixed customRuns cancelled: retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), withRunCancelled(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), withCustomRunCancelled(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: false,
 	}, {
@@ -4211,11 +4211,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run cancelled: retries remaining, one matrixed run running",
+		name: "one matrixed customrun cancelled: retries remaining, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4226,11 +4226,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs cancelled: no retries remaining",
+		name: "matrixed customRuns cancelled: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(withRunRetries(makeRunFailed(runs[0]))), withRunCancelled(withRunRetries(makeRunFailed(runs[1])))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[0]))), withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[1])))},
 		},
 		want: false,
 	}, {
@@ -4241,11 +4241,11 @@ func TestIsSuccessful(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "one matrixed run cancelled: no retries remaining, one matrixed run running",
+		name: "one matrixed customrun cancelled: no retries remaining, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(withRunRetries(makeRunFailed(runs[0]))), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[0]))), makeCustomRunStarted(customRuns[1])},
 		},
 		want: false,
 	}} {
@@ -4270,7 +4270,7 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "run not started",
+		name: "customrun not started",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
@@ -4285,11 +4285,11 @@ func TestIsRunning(t *testing.T) {
 		want: true,
 	}, {
 
-		name: "run running",
+		name: "customrun running",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
-			Run:          makeRunStarted(runs[0]),
+			CustomRun:    makeCustomRunStarted(customRuns[0]),
 		},
 		want: true,
 	}, {
@@ -4301,11 +4301,11 @@ func TestIsRunning(t *testing.T) {
 		want: false,
 	}, {
 
-		name: "run succeeded",
+		name: "customrun succeeded",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
-			Run:          makeRunSucceeded(runs[0]),
+			CustomRun:    makeCustomRunSucceeded(customRuns[0]),
 		},
 		want: false,
 	}, {
@@ -4317,11 +4317,11 @@ func TestIsRunning(t *testing.T) {
 		want: false,
 	}, {
 
-		name: "run failed",
+		name: "customrun failed",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
 			CustomTask:   true,
-			Run:          makeRunFailed(runs[0]),
+			CustomRun:    makeCustomRunFailed(customRuns[0]),
 		},
 		want: false,
 	}, {
@@ -4333,11 +4333,11 @@ func TestIsRunning(t *testing.T) {
 		want: true,
 	}, {
 
-		name: "run failed: retries remaining",
+		name: "customrun failed: retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
 			CustomTask:   true,
-			Run:          makeRunFailed(runs[0]),
+			CustomRun:    makeCustomRunFailed(customRuns[0]),
 		},
 		want: true,
 	}, {
@@ -4349,11 +4349,11 @@ func TestIsRunning(t *testing.T) {
 		want: false,
 	}, {
 
-		name: "run failed: no retries remaining",
+		name: "customrun failed: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
 			CustomTask:   true,
-			Run:          withRunRetries(makeRunFailed(runs[0])),
+			CustomRun:    withCustomRunRetries(makeCustomRunFailed(customRuns[0])),
 		},
 		want: false,
 	}, {
@@ -4371,18 +4371,18 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "run cancelled",
+		name: "customrun cancelled",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
-			Run:          withRunCancelled(makeRunFailed(runs[0])),
+			CustomRun:    withCustomRunCancelled(makeCustomRunFailed(customRuns[0])),
 			CustomTask:   true,
 		},
 		want: false,
 	}, {
-		name: "run cancelled but not failed",
+		name: "customrun cancelled but not failed",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task"},
-			Run:          withRunCancelled(newRun(runs[0])),
+			CustomRun:    withCustomRunCancelled(newCustomRun(customRuns[0])),
 			CustomTask:   true,
 		},
 		want: true,
@@ -4394,10 +4394,10 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "run cancelled: retries remaining",
+		name: "customrun cancelled: retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
-			Run:          withRunCancelled(makeRunFailed(runs[0])),
+			CustomRun:    withCustomRunCancelled(makeCustomRunFailed(customRuns[0])),
 			CustomTask:   true,
 		},
 		want: false,
@@ -4409,10 +4409,10 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "run cancelled: no retries remaining",
+		name: "customrun cancelled: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			PipelineTask: &v1beta1.PipelineTask{Name: "task", Retries: 1},
-			Run:          withRunCancelled(withRunRetries(makeRunFailed(runs[0]))),
+			CustomRun:    withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[0]))),
 			CustomTask:   true,
 		},
 		want: false,
@@ -4423,7 +4423,7 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs not started",
+		name: "matrixed customRuns not started",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
@@ -4437,11 +4437,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "matrixed runs running",
+		name: "matrixed customRuns running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunStarted(runs[0]), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunStarted(customRuns[0]), makeCustomRunStarted(customRuns[1])},
 		},
 		want: true,
 	}, {
@@ -4452,11 +4452,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "one matrixed run running",
+		name: "one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunStarted(runs[0]), makeRunSucceeded(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunStarted(customRuns[0]), makeCustomRunSucceeded(customRuns[1])},
 		},
 		want: true,
 	}, {
@@ -4467,11 +4467,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs succeeded",
+		name: "matrixed customRuns succeeded",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunSucceeded(runs[0]), makeRunSucceeded(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunSucceeded(customRuns[0]), makeCustomRunSucceeded(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4482,11 +4482,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs failed",
+		name: "matrixed customRuns failed",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), makeRunFailed(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), makeCustomRunFailed(customRuns[1])},
 		},
 		want: false,
 	}, {
@@ -4497,11 +4497,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "one matrixed run failed, one matrixed run running",
+		name: "one matrixed customrun failed, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), makeCustomRunStarted(customRuns[1])},
 		},
 		want: true,
 	}, {
@@ -4512,11 +4512,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "matrixed runs failed: retries remaining",
+		name: "matrixed customRuns failed: retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), makeRunFailed(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), makeCustomRunFailed(customRuns[1])},
 		},
 		want: true,
 	}, {
@@ -4527,11 +4527,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "matrixed runs failed: one run with retries remaining",
+		name: "matrixed customRuns failed: one customrun with retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{makeRunFailed(runs[0]), withRunRetries(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{makeCustomRunFailed(customRuns[0]), withCustomRunRetries(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: true,
 	}, {
@@ -4542,11 +4542,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs failed: no retries remaining",
+		name: "matrixed customRuns failed: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunRetries(makeRunFailed(runs[0])), withRunRetries(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunRetries(makeCustomRunFailed(customRuns[0])), withCustomRunRetries(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: false,
 	}, {
@@ -4557,11 +4557,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs cancelled",
+		name: "matrixed customRuns cancelled",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), withRunCancelled(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), withCustomRunCancelled(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: false,
 	}, {
@@ -4572,11 +4572,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "one matrixed run cancelled, one matrixed run running",
+		name: "one matrixed run cancelled, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), makeCustomRunStarted(customRuns[1])},
 		},
 		want: true,
 	}, {
@@ -4587,11 +4587,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "matrixed runs cancelled but not failed",
+		name: "matrixed customRuns cancelled but not failed",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(newRun(runs[0])), withRunCancelled(newRun(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(newCustomRun(customRuns[0])), withCustomRunCancelled(newCustomRun(customRuns[1]))},
 		},
 		want: true,
 	}, {
@@ -4602,11 +4602,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "one matrixed run cancelled but not failed",
+		name: "one matrixed customrun cancelled but not failed",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: matrixedPipelineTask,
-			Runs:         []*v1alpha1.Run{withRunCancelled(newRun(runs[0])), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(newCustomRun(customRuns[0])), makeCustomRunStarted(customRuns[1])},
 		},
 		want: true,
 	}, {
@@ -4617,11 +4617,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs cancelled: retries remaining",
+		name: "matrixed customRuns cancelled: retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), withRunCancelled(makeRunFailed(runs[1]))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), withCustomRunCancelled(makeCustomRunFailed(customRuns[1]))},
 		},
 		want: false,
 	}, {
@@ -4632,11 +4632,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "one matrixed run cancelled: retries remaining, one matrixed run running",
+		name: "one matrixed customrun cancelled: retries remaining, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(makeRunFailed(runs[0])), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(makeCustomRunFailed(customRuns[0])), makeCustomRunStarted(customRuns[1])},
 		},
 		want: true,
 	}, {
@@ -4647,11 +4647,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: false,
 	}, {
-		name: "matrixed runs cancelled: no retries remaining",
+		name: "matrixed customRuns cancelled: no retries remaining",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(withRunRetries(makeRunFailed(runs[0]))), withRunCancelled(withRunRetries(makeRunFailed(runs[1])))},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[0]))), withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[1])))},
 		},
 		want: false,
 	}, {
@@ -4662,11 +4662,11 @@ func TestIsRunning(t *testing.T) {
 		},
 		want: true,
 	}, {
-		name: "one matrixed run cancelled: no retries remaining, one matrixed run running",
+		name: "one matrixed customrun cancelled: no retries remaining, one matrixed customrun running",
 		rpt: ResolvedPipelineTask{
 			CustomTask:   true,
 			PipelineTask: withPipelineTaskRetries(*matrixedPipelineTask, 1),
-			Runs:         []*v1alpha1.Run{withRunCancelled(withRunRetries(makeRunFailed(runs[0]))), makeRunStarted(runs[1])},
+			CustomRuns:   []*v1beta1.CustomRun{withCustomRunCancelled(withCustomRunRetries(makeCustomRunFailed(customRuns[0]))), makeCustomRunStarted(customRuns[1])},
 		},
 		want: true,
 	}} {

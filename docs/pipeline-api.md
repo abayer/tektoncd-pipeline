@@ -1975,8 +1975,8 @@ string
 <td>
 <code>status</code><br/>
 <em>
-<a href="#tekton.dev/v1alpha1.RunStatus">
-RunStatus
+<a href="#tekton.dev/v1beta1.CustomRunStatus">
+CustomRunStatus
 </a>
 </em>
 </td>
@@ -6594,7 +6594,7 @@ string
 <h3 id="tekton.dev/v1alpha1.RunStatus">RunStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#tekton.dev/v1alpha1.Run">Run</a>, <a href="#tekton.dev/v1.PipelineRunRunStatus">PipelineRunRunStatus</a>, <a href="#tekton.dev/v1beta1.PipelineRunRunStatus">PipelineRunRunStatus</a>, <a href="#tekton.dev/v1alpha1.RunStatusFields">RunStatusFields</a>)
+(<em>Appears on:</em><a href="#tekton.dev/v1alpha1.Run">Run</a>, <a href="#tekton.dev/v1alpha1.RunStatusFields">RunStatusFields</a>)
 </p>
 <div>
 <p>RunStatus defines the observed state of Run</p>
@@ -9265,8 +9265,8 @@ string
 <td>
 <code>status</code><br/>
 <em>
-<a href="#tekton.dev/v1alpha1.RunStatus">
-RunStatus
+<a href="#tekton.dev/v1beta1.CustomRunStatus">
+CustomRunStatus
 </a>
 </em>
 </td>
@@ -13784,7 +13784,7 @@ string
 <h3 id="tekton.dev/v1beta1.CustomRunStatus">CustomRunStatus
 </h3>
 <p>
-(<em>Appears on:</em><a href="#tekton.dev/v1beta1.CustomRun">CustomRun</a>, <a href="#tekton.dev/v1beta1.CustomRunStatusFields">CustomRunStatusFields</a>)
+(<em>Appears on:</em><a href="#tekton.dev/v1beta1.CustomRun">CustomRun</a>, <a href="#tekton.dev/v1.PipelineRunRunStatus">PipelineRunRunStatus</a>, <a href="#tekton.dev/v1beta1.PipelineRunRunStatus">PipelineRunRunStatus</a>, <a href="#tekton.dev/v1beta1.CustomRunStatusFields">CustomRunStatusFields</a>)
 </p>
 <div>
 <p>CustomRunStatus defines the observed state of CustomRun</p>

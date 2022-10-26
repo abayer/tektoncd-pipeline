@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/test/diff"
 	corev1 "k8s.io/api/core/v1"
@@ -91,16 +90,16 @@ var pipelineRunState = PipelineRunState{{
 		}},
 	},
 }, {
-	CustomTask: true,
-	RunName:    "aRun",
-	Run: &v1alpha1.Run{
+	CustomTask:    true,
+	CustomRunName: "aRun",
+	CustomRun: &v1beta1.CustomRun{
 		ObjectMeta: metav1.ObjectMeta{Name: "aRun"},
-		Status: v1alpha1.RunStatus{
+		Status: v1beta1.CustomRunStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{successCondition},
 			},
-			RunStatusFields: v1alpha1.RunStatusFields{
-				Results: []v1alpha1.RunResult{{
+			CustomRunStatusFields: v1beta1.CustomRunStatusFields{
+				Results: []v1beta1.CustomRunResult{{
 					Name:  "aResult",
 					Value: "aResultValue",
 				}},
@@ -403,18 +402,18 @@ func TestTaskParamResolver_ResolveResultRefs(t *testing.T) {
 		want:    nil,
 		wantErr: true,
 	}, {
-		name: "successful resolution: using result reference to a Run",
+		name: "successful resolution: using result reference to a CustomRun",
 		pipelineRunState: PipelineRunState{{
-			CustomTask: true,
-			RunName:    "aRun",
-			Run: &v1alpha1.Run{
+			CustomTask:    true,
+			CustomRunName: "aRun",
+			CustomRun: &v1beta1.CustomRun{
 				ObjectMeta: metav1.ObjectMeta{Name: "aRun"},
-				Status: v1alpha1.RunStatus{
+				Status: v1beta1.CustomRunStatus{
 					Status: duckv1.Status{
 						Conditions: []apis.Condition{successCondition},
 					},
-					RunStatusFields: v1alpha1.RunStatusFields{
-						Results: []v1alpha1.RunResult{{
+					CustomRunStatusFields: v1beta1.CustomRunStatusFields{
+						Results: []v1beta1.CustomRunResult{{
 							Name:  "aResult",
 							Value: "aResultValue",
 						}},
@@ -436,17 +435,17 @@ func TestTaskParamResolver_ResolveResultRefs(t *testing.T) {
 				PipelineTask: "aCustomPipelineTask",
 				Result:       "aResult",
 			},
-			FromRun: "aRun",
+			FromCustomRun: "aRun",
 		}},
 		wantErr: false,
 	}, {
-		name: "failed resolution: using result reference to a failed Run",
+		name: "failed resolution: using result reference to a failed CustomRun",
 		pipelineRunState: PipelineRunState{{
-			CustomTask: true,
-			RunName:    "aRun",
-			Run: &v1alpha1.Run{
+			CustomTask:    true,
+			CustomRunName: "aRun",
+			CustomRun: &v1beta1.CustomRun{
 				ObjectMeta: metav1.ObjectMeta{Name: "aRun"},
-				Status: v1alpha1.RunStatus{
+				Status: v1beta1.CustomRunStatus{
 					Status: duckv1.Status{
 						Conditions: []apis.Condition{failedCondition},
 					},
@@ -471,11 +470,11 @@ func TestTaskParamResolver_ResolveResultRefs(t *testing.T) {
 			sort.SliceStable(got, func(i, j int) bool {
 				fromI := got[i].FromTaskRun
 				if fromI == "" {
-					fromI = got[i].FromRun
+					fromI = got[i].FromCustomRun
 				}
 				fromJ := got[j].FromTaskRun
 				if fromJ == "" {
-					fromJ = got[j].FromRun
+					fromJ = got[j].FromCustomRun
 				}
 				return strings.Compare(fromI, fromJ) < 0
 			})
@@ -597,7 +596,7 @@ func TestResolveResultRefs(t *testing.T) {
 		wantErr: true,
 		wantPt:  "aTask",
 	}, {
-		name:             "Test successful result references resolution - params - Run",
+		name:             "Test successful result references resolution - params - CustomRun",
 		pipelineRunState: pipelineRunState,
 		targets: PipelineRunState{
 			pipelineRunState[6],
@@ -608,7 +607,7 @@ func TestResolveResultRefs(t *testing.T) {
 				PipelineTask: "aCustomPipelineTask",
 				Result:       "aResult",
 			},
-			FromRun: "aRun",
+			FromCustomRun: "aRun",
 		}},
 		wantErr: false,
 	}} {
@@ -683,7 +682,7 @@ func TestResolveResultRef(t *testing.T) {
 		wantErr:          true,
 		wantPt:           "aTask",
 	}, {
-		name:             "Test successful result references resolution - params - Run",
+		name:             "Test successful result references resolution - params - CustomRun",
 		pipelineRunState: pipelineRunState,
 		target:           pipelineRunState[6],
 		want: ResolvedResultRefs{{
@@ -692,7 +691,7 @@ func TestResolveResultRef(t *testing.T) {
 				PipelineTask: "aCustomPipelineTask",
 				Result:       "aResult",
 			},
-			FromRun: "aRun",
+			FromCustomRun: "aRun",
 		}},
 		wantErr: false,
 	}} {
@@ -715,11 +714,11 @@ func TestResolveResultRef(t *testing.T) {
 func lessResolvedResultRefs(i, j *ResolvedResultRef) bool {
 	fromI := i.FromTaskRun
 	if fromI == "" {
-		fromI = i.FromRun
+		fromI = i.FromCustomRun
 	}
 	fromJ := j.FromTaskRun
 	if fromJ == "" {
-		fromJ = j.FromRun
+		fromJ = j.FromCustomRun
 	}
 	return strings.Compare(fromI, fromJ) < 0
 }
