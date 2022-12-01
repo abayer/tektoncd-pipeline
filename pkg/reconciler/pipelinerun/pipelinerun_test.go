@@ -33,7 +33,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/tektoncd/pipeline/pkg/apis/config"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	resourcev1alpha1 "github.com/tektoncd/pipeline/pkg/apis/resource/v1alpha1"
@@ -114,6 +113,7 @@ const (
 	ociBundlesFeatureFlag          = "enable-tekton-oci-bundles"
 	embeddedStatusFeatureFlag      = "embedded-status"
 	maxMatrixCombinationsCountFlag = "default-max-matrix-combinations-count"
+	legacyCustomTasksFlag          = "legacy-custom-tasks"
 )
 
 type PipelineRunTest struct {
@@ -544,9 +544,204 @@ spec:
 }
 
 // TestReconcile_CustomTask runs "Reconcile" on a PipelineRun with one Custom
-// Task reference that has not been run yet.  It verifies that the Run is
+// Task reference that has not been run yet.  It verifies that the CustomRun is
 // created, it checks the resulting API actions, status and events.
 func TestReconcile_CustomTask(t *testing.T) {
+	names.TestingSeed()
+	const pipelineRunName = "test-pipelinerun"
+	const namespace = "namespace"
+
+	simpleCustomTaskPRYAML := `metadata:
+  name: test-pipelinerun
+  namespace: namespace
+spec:
+  pipelineSpec:
+    tasks:
+    - name: custom-task
+      params:
+      - name: param1
+        value: value1
+      retries: 3
+      taskRef:
+        apiVersion: example.dev/v0
+        kind: Example
+`
+	simpleCustomTaskWantRunYAML := `metadata:
+  annotations: {}
+  labels:
+    tekton.dev/memberOf: tasks
+    tekton.dev/pipeline: test-pipelinerun
+    tekton.dev/pipelineRun: test-pipelinerun
+    tekton.dev/pipelineTask: custom-task
+  name: test-pipelinerun-custom-task
+  namespace: namespace
+  ownerReferences:
+  - apiVersion: tekton.dev/v1beta1
+    blockOwnerDeletion: true
+    controller: true
+    kind: PipelineRun
+    name: test-pipelinerun
+spec:
+  params:
+  - name: param1
+    value: value1
+  customRef:
+    apiVersion: example.dev/v0
+    kind: Example
+  retries: 3
+  serviceAccountName: default
+`
+
+	tcs := []struct {
+		name           string
+		pr             *v1beta1.PipelineRun
+		wantRun        *v1beta1.CustomRun
+		embeddedStatus string
+	}{{
+		name:    "simple custom task with taskRef",
+		pr:      parse.MustParseV1beta1PipelineRun(t, simpleCustomTaskPRYAML),
+		wantRun: parse.MustParseCustomRun(t, simpleCustomTaskWantRunYAML),
+	}, {
+		name:           "simple custom task with full embedded status",
+		pr:             parse.MustParseV1beta1PipelineRun(t, simpleCustomTaskPRYAML),
+		wantRun:        parse.MustParseCustomRun(t, simpleCustomTaskWantRunYAML),
+		embeddedStatus: config.FullEmbeddedStatus,
+	}, {
+		name:           "simple custom task with minimal embedded status",
+		pr:             parse.MustParseV1beta1PipelineRun(t, simpleCustomTaskPRYAML),
+		wantRun:        parse.MustParseCustomRun(t, simpleCustomTaskWantRunYAML),
+		embeddedStatus: config.MinimalEmbeddedStatus,
+	}, {
+		name: "simple custom task with taskSpec",
+		pr: parse.MustParseV1beta1PipelineRun(t, `
+metadata:
+  name: test-pipelinerun
+  namespace: namespace
+spec:
+  pipelineSpec:
+    tasks:
+    - name: custom-task
+      params:
+      - name: param1
+        value: value1
+      taskSpec:
+        apiVersion: example.dev/v0
+        kind: Example
+        metadata:
+          labels:
+            test-label: test
+        spec:
+          field1: 123
+          field2: value
+`),
+		wantRun: mustParseCustomRunWithObjectMeta(t,
+			taskRunObjectMeta("test-pipelinerun-custom-task", "namespace", "test-pipelinerun", "test-pipelinerun", "custom-task", false),
+			`
+spec:
+  params:
+  - name: param1
+    value: value1
+  serviceAccountName: default
+  customSpec:
+    apiVersion: example.dev/v0
+    kind: Example
+    metadata:
+      labels:
+        test-label: test
+    spec:
+      field1: 123
+      field2: value
+`),
+	}, {
+		name: "custom task with workspace",
+		pr: parse.MustParseV1beta1PipelineRun(t, `
+metadata:
+  name: test-pipelinerun
+  namespace: namespace
+spec:
+  pipelineSpec:
+    tasks:
+    - name: custom-task
+      taskRef:
+        apiVersion: example.dev/v0
+        kind: Example
+      workspaces:
+      - name: taskws
+        subPath: bar
+        workspace: pipelinews
+    workspaces:
+    - name: pipelinews
+  workspaces:
+  - name: pipelinews
+    persistentVolumeClaim:
+      claimName: myclaim
+    subPath: foo
+`),
+		wantRun: mustParseCustomRunWithObjectMeta(t,
+			taskRunObjectMetaWithAnnotations("test-pipelinerun-custom-task", "namespace", "test-pipelinerun",
+				"test-pipelinerun", "custom-task", false, map[string]string{
+					"pipeline.tekton.dev/affinity-assistant": getAffinityAssistantName("pipelinews", pipelineRunName),
+				}),
+			`
+spec:
+  customRef:
+    apiVersion: example.dev/v0
+    kind: Example
+  serviceAccountName: default
+  workspaces:
+  - name: taskws
+    persistentVolumeClaim:
+      claimName: myclaim
+    subPath: foo/bar
+`),
+	}}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			embeddedStatus := tc.embeddedStatus
+			if embeddedStatus == "" {
+				embeddedStatus = config.DefaultEmbeddedStatus
+			}
+			cms := []*corev1.ConfigMap{withCustomTasks(withEmbeddedStatus(newFeatureFlagsConfigMap(), embeddedStatus))}
+
+			d := test.Data{
+				PipelineRuns: []*v1beta1.PipelineRun{tc.pr},
+				ConfigMaps:   cms,
+			}
+			prt := newPipelineRunTest(d, t)
+			defer prt.Cancel()
+
+			wantEvents := []string{
+				"Normal Started",
+				"Normal Running Tasks Completed: 0",
+			}
+			reconciledRun, clients := prt.reconcileRun(namespace, pipelineRunName, wantEvents, false)
+
+			actions := clients.Pipeline.Actions()
+			if len(actions) < 2 {
+				t.Fatalf("Expected client to have at least two action implementation but it has %d", len(actions))
+			}
+
+			// Check that the expected Run was created.
+			actual := actions[0].(ktesting.CreateAction).GetObject()
+			// Ignore the TypeMeta field, because parse.MustParseRun automatically populates it but the "actual" Run won't have it.
+			if d := cmp.Diff(tc.wantRun, actual, cmpopts.IgnoreFields(v1beta1.CustomRun{}, "TypeMeta")); d != "" {
+				t.Errorf("expected to see Run created: %s", diff.PrintWantGot(d))
+			}
+
+			// This PipelineRun is in progress now and the status should reflect that
+			checkPipelineRunConditionStatusAndReason(t, reconciledRun, corev1.ConditionUnknown, v1beta1.PipelineRunReasonRunning.String())
+
+			verifyRunStatusesCount(t, embeddedStatus, reconciledRun.Status, 1)
+			verifyRunStatusesNames(t, embeddedStatus, reconciledRun.Status, tc.wantRun.Name)
+		})
+	}
+}
+
+// TestReconcile_LegacyCustomTask runs "Reconcile" on a PipelineRun with one Custom
+// Task reference that has not been run yet, with the legacy-custom-tasks feature flag set.
+// It verifies that the Run is created, it checks the resulting API actions, status and events.
+func TestReconcile_LegacyCustomTask(t *testing.T) {
 	names.TestingSeed()
 	const pipelineRunName = "test-pipelinerun"
 	const namespace = "namespace"
@@ -702,7 +897,7 @@ spec:
 			if embeddedStatus == "" {
 				embeddedStatus = config.DefaultEmbeddedStatus
 			}
-			cms := []*corev1.ConfigMap{withCustomTasks(withEmbeddedStatus(newFeatureFlagsConfigMap(), embeddedStatus))}
+			cms := []*corev1.ConfigMap{withLegacyCustomTask(withCustomTasks(withEmbeddedStatus(newFeatureFlagsConfigMap(), embeddedStatus)))}
 
 			d := test.Data{
 				PipelineRuns: []*v1beta1.PipelineRun{tc.pr},
@@ -1458,6 +1653,12 @@ func withOCIBundles(cm *corev1.ConfigMap) *corev1.ConfigMap {
 	return newCM
 }
 
+func withLegacyCustomTask(cm *corev1.ConfigMap) *corev1.ConfigMap {
+	newCM := cm.DeepCopy()
+	newCM.Data[legacyCustomTasksFlag] = "true"
+	return newCM
+}
+
 func withEmbeddedStatus(cm *corev1.ConfigMap, flagVal string) *corev1.ConfigMap {
 	newCM := cm.DeepCopy()
 	newCM.Data[embeddedStatusFeatureFlag] = flagVal
@@ -1585,12 +1786,12 @@ spec:
     name: test-pipeline
   serviceAccountName: test-sa
 `)}
-	runs := []*v1alpha1.Run{mustParseRunWithObjectMeta(t,
+	runs := []*v1beta1.CustomRun{mustParseCustomRunWithObjectMeta(t,
 		taskRunObjectMeta("test-pipeline-run-custom-task-with-timeout-hello-world-1", "test", "test-pipeline-run-custom-task-with-timeout",
 			"test-pipeline", "hello-world-1", true),
 		`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   timeout: 1m0s
@@ -1605,7 +1806,7 @@ status:
 		PipelineRuns: prs,
 		Pipelines:    ps,
 		ConfigMaps:   cms,
-		Runs:         runs,
+		CustomRuns:   runs,
 	}
 	prt := newPipelineRunTest(d, t)
 	defer prt.Cancel()
@@ -1625,7 +1826,7 @@ status:
 	var got []jsonpatch.Operation
 	for _, a := range actions {
 		if action, ok := a.(ktesting.PatchAction); ok {
-			if a.(ktesting.PatchAction).Matches("patch", "runs") {
+			if a.(ktesting.PatchAction).Matches("patch", "customruns") {
 				err := json.Unmarshal(action.GetPatch(), &got)
 				if err != nil {
 					t.Fatalf("Expected to get a patch operation for cancel,"+
@@ -1698,12 +1899,12 @@ status:
 			prs[0].Spec.Timeout = tc.timeout
 			prs[0].Spec.Timeouts = tc.timeouts
 
-			runs := []*v1alpha1.Run{mustParseRunWithObjectMeta(t,
+			runs := []*v1beta1.CustomRun{mustParseCustomRunWithObjectMeta(t,
 				taskRunObjectMeta("test-pipeline-run-custom-task-hello-world-1", "test", "test-pipeline-run-custom-task",
 					"test-pipeline", "hello-world-1", true),
 				`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
 status:
@@ -1719,7 +1920,7 @@ status:
 				PipelineRuns: prs,
 				Pipelines:    ps,
 				ConfigMaps:   cms,
-				Runs:         runs,
+				CustomRuns:   runs,
 			}
 			prt := newPipelineRunTest(d, t)
 			defer prt.Cancel()
@@ -1749,7 +1950,7 @@ status:
 			var got []jsonpatch.Operation
 			for _, a := range actions {
 				if action, ok := a.(ktesting.PatchAction); ok {
-					if a.(ktesting.PatchAction).Matches("patch", "runs") {
+					if a.(ktesting.PatchAction).Matches("patch", "customruns") {
 						err := json.Unmarshal(action.GetPatch(), &got)
 						if err != nil {
 							t.Fatalf("Expected to get a patch operation for cancel,"+
@@ -1762,13 +1963,13 @@ status:
 			want := []jsonpatch.JsonPatchOperation{{
 				Operation: "add",
 				Path:      "/spec/status",
-				Value:     string(v1alpha1.RunReasonCancelled),
+				Value:     string(v1beta1.CustomRunSpecStatusCancelled),
 			}, {
 				Operation: "add",
 				Path:      "/spec/statusMessage",
-				Value:     string(v1alpha1.RunCancelledByPipelineTimeoutMsg),
+				Value:     string(v1beta1.CustomRunCancelledByPipelineTimeoutMsg),
 			}}
-			if d := cmp.Diff(got, want); d != "" {
+			if d := cmp.Diff(want, got); d != "" {
 				t.Fatalf("Expected RunCancelled patch operation, but got a mismatch %s", diff.PrintWantGot(d))
 			}
 		})
@@ -3324,7 +3525,7 @@ spec:
 	expectedSANames := []string{"test-sa-0", "test-sa-1"}
 
 	for i := range ps[0].Spec.Tasks {
-		actual, err := clients.Pipeline.TektonV1alpha1().Runs("foo").Get(prt.TestAssets.Ctx, runNames[i], metav1.GetOptions{})
+		actual, err := clients.Pipeline.TektonV1beta1().CustomRuns("foo").Get(prt.TestAssets.Ctx, runNames[i], metav1.GetOptions{})
 		if err != nil {
 			t.Errorf("Expected a Run %s to be created but it wasn't: %s", runNames[i], err)
 			continue
@@ -3512,11 +3713,6 @@ spec:
 `)}
 
 	serviceAccount := "custom-sa"
-	podTemplate := &pod.Template{
-		NodeSelector: map[string]string{
-			"workloadtype": "tekton",
-		},
-	}
 	prs := []*v1beta1.PipelineRun{parse.MustParseV1beta1PipelineRun(t, `
 metadata:
   name: test-pipeline-run
@@ -3546,17 +3742,13 @@ spec:
 
 	runName := "test-pipeline-run-hello-world-1"
 
-	actual, err := clients.Pipeline.TektonV1alpha1().Runs("foo").Get(prt.TestAssets.Ctx, runName, metav1.GetOptions{})
+	actual, err := clients.Pipeline.TektonV1beta1().CustomRuns("foo").Get(prt.TestAssets.Ctx, runName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("Expected a Run %s to be created but it wasn't: %s", runName, err)
 	}
 	if actual.Spec.ServiceAccountName != serviceAccount {
 		t.Errorf("Expected Run %s to have service account %s but it was %s", runName, serviceAccount, actual.Spec.ServiceAccountName)
 	}
-	if d := cmp.Diff(actual.Spec.PodTemplate, podTemplate); d != "" {
-		t.Errorf("Incorrect pod template in Run %s. Diff %s", runName, diff.PrintWantGot(d))
-	}
-
 }
 
 func ensurePVCCreated(ctx context.Context, t *testing.T, clients test.Clients, name, namespace string) {
@@ -4775,12 +4967,12 @@ status:
   - status: "True"
     type: Succeeded
 `)}
-	rs := []*v1alpha1.Run{mustParseRunWithObjectMeta(t,
+	rs := []*v1beta1.CustomRun{mustParseCustomRunWithObjectMeta(t,
 		taskRunObjectMeta("test-pipeline-run-finally-results-task-run-b", "foo",
 			"test-pipeline-run-finally-results", "test-pipeline", "b-task", true),
 		`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
 status:
@@ -4832,7 +5024,7 @@ spec:
 		Pipelines:    ps,
 		Tasks:        ts,
 		TaskRuns:     trs,
-		Runs:         rs,
+		CustomRuns:   rs,
 		ConfigMaps:   []*corev1.ConfigMap{withCustomTasks(withEmbeddedStatus(newFeatureFlagsConfigMap(), embeddedStatus))},
 	}
 	prt := newPipelineRunTest(d, t)
@@ -4964,8 +5156,8 @@ status:
     kind: TaskRun
     name: test-pipeline-run-finally-results-task-run-a
     pipelineTaskName: a-task
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: test-pipeline-run-finally-results-task-run-b
     pipelineTaskName: b-task
   taskRuns:
@@ -5051,8 +5243,8 @@ status:
     kind: TaskRun
     name: test-pipeline-run-finally-results-task-run-a
     pipelineTaskName: a-task
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: test-pipeline-run-finally-results-task-run-b
     pipelineTaskName: b-task
 `)
@@ -5114,12 +5306,12 @@ status:
     value: aResultValue
 `)}
 
-	rs := []*v1alpha1.Run{mustParseRunWithObjectMeta(t,
+	rs := []*v1beta1.CustomRun{mustParseCustomRunWithObjectMeta(t,
 		taskRunObjectMeta("test-pipeline-run-results-task-run-b", "foo",
 			"test-pipeline-run-results", "test-pipeline", "b-task", true),
 		`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
 status:
@@ -5158,7 +5350,7 @@ spec:
 		Pipelines:    ps,
 		Tasks:        ts,
 		TaskRuns:     trs,
-		Runs:         rs,
+		CustomRuns:   rs,
 		ConfigMaps:   []*corev1.ConfigMap{withCustomTasks(withEmbeddedStatus(newFeatureFlagsConfigMap(), embeddedStatus))},
 	}
 
@@ -5267,8 +5459,8 @@ status:
   - name: custom-result
     value: bResultValue
   childReferences:
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: test-pipeline-run-results-task-run-b
     pipelineTaskName: b-task
   - apiVersion: tekton.dev/v1beta1
@@ -5339,8 +5531,8 @@ status:
     value: bResultValue
   taskRuns: {}
   childReferences:
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: test-pipeline-run-results-task-run-b
     pipelineTaskName: b-task
   - apiVersion: tekton.dev/v1beta1
@@ -5731,12 +5923,12 @@ status:
     type: Succeeded
 `)
 
-	orphanedRun := mustParseRunWithObjectMeta(t,
+	orphanedRun := mustParseCustomRunWithObjectMeta(t,
 		taskRunObjectMeta("test-pipeline-run-out-of-sync-hello-world-5", "foo", prOutOfSyncName, testPipeline.Name,
 			"hello-world-5", true),
 		`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
 status:
@@ -5784,7 +5976,7 @@ status:
 	ps := []*v1beta1.Pipeline{testPipeline}
 	ts := []*v1beta1.Task{helloWorldTask}
 	trs := []*v1beta1.TaskRun{taskRunDone, taskRunOrphaned}
-	runs := []*v1alpha1.Run{orphanedRun}
+	runs := []*v1beta1.CustomRun{orphanedRun}
 
 	cms := []*corev1.ConfigMap{withCustomTasks(withEmbeddedStatus(newFeatureFlagsConfigMap(), embeddedStatus))}
 
@@ -5793,7 +5985,7 @@ status:
 		Pipelines:    ps,
 		Tasks:        ts,
 		TaskRuns:     trs,
-		Runs:         runs,
+		CustomRuns:   runs,
 		ConfigMaps:   cms,
 	}
 	prt := newPipelineRunTest(d, t)
@@ -5813,8 +6005,8 @@ status:
 			switch {
 			case action.Matches("create", "taskruns"):
 				t.Errorf("Expected client to not have created a TaskRun, but it did")
-			case action.Matches("create", "runs"):
-				t.Errorf("Expected client to not have created a Run, but it did")
+			case action.Matches("create", "customruns"):
+				t.Errorf("Expected client to not have created a CustomRun, but it did")
 			case action.Matches("update", "pipelineruns"):
 				pipelineUpdates++
 			case action.Matches("patch", "pipelineruns"):
@@ -5871,7 +6063,7 @@ status:
 	// orphanedRun was recovered into the status
 	expectedRunsStatus[orphanedRun.Name] = &v1beta1.PipelineRunRunStatus{
 		PipelineTaskName: "hello-world-5",
-		Status: &v1alpha1.RunStatus{
+		Status: &v1beta1.CustomRunStatus{
 			Status: duckv1.Status{
 				Conditions: []apis.Condition{
 					{
@@ -5908,13 +6100,13 @@ status:
 				}
 
 				taskRunsStatus[cr.Name] = trStatusForPipelineRun
-			} else if cr.Kind == "Run" {
+			} else if cr.Kind == "CustomRun" {
 				rStatusForPipelineRun := &v1beta1.PipelineRunRunStatus{
 					PipelineTaskName: cr.PipelineTaskName,
 					WhenExpressions:  cr.WhenExpressions,
 				}
 
-				r, _ := clients.Pipeline.TektonV1alpha1().Runs("foo").Get(ctx, cr.Name, metav1.GetOptions{})
+				r, _ := clients.Pipeline.TektonV1beta1().CustomRuns("foo").Get(ctx, cr.Name, metav1.GetOptions{})
 				if r != nil {
 					rStatusForPipelineRun.Status = &r.Status
 				}
@@ -6029,7 +6221,7 @@ spec:
 			if cr.Kind == "TaskRun" {
 				taskRunName = cr.Name
 			}
-			if cr.Kind == "Run" {
+			if cr.Kind == "CustomRun" {
 				runName = cr.Name
 			}
 		}
@@ -7876,8 +8068,8 @@ func verifyRunStatusesCount(t *testing.T, embeddedStatus string, prStatus v1beta
 	if shouldHaveFullEmbeddedStatus(embeddedStatus) && len(prStatus.Runs) != runCount {
 		t.Errorf("Expected PipelineRun status to have exactly %d runs, but was %d", runCount, len(prStatus.Runs))
 	}
-	if shouldHaveMinimalEmbeddedStatus(embeddedStatus) && len(filterChildRefsForKind(prStatus.ChildReferences, "Run")) != runCount {
-		t.Errorf("Expected PipelineRun status ChildReferences to have %d runs, but was %d", runCount, len(filterChildRefsForKind(prStatus.ChildReferences, "Run")))
+	if shouldHaveMinimalEmbeddedStatus(embeddedStatus) && len(filterChildRefsForKind(prStatus.ChildReferences, "CustomRun")) != runCount {
+		t.Errorf("Expected PipelineRun status ChildReferences to have %d runs, but was %d", runCount, len(filterChildRefsForKind(prStatus.ChildReferences, "CustomRun")))
 	}
 }
 
@@ -7892,7 +8084,7 @@ func verifyRunStatusesNames(t *testing.T, embeddedStatus string, prStatus v1beta
 	}
 	if shouldHaveMinimalEmbeddedStatus(embeddedStatus) {
 		rnMap := make(map[string]struct{})
-		for _, cr := range filterChildRefsForKind(prStatus.ChildReferences, "Run") {
+		for _, cr := range filterChildRefsForKind(prStatus.ChildReferences, "CustomRun") {
 			rnMap[cr.Name] = struct{}{}
 		}
 
@@ -7939,6 +8131,12 @@ func mustParseTaskRunWithObjectMeta(t *testing.T, objectMeta metav1.ObjectMeta, 
 	tr := parse.MustParseV1beta1TaskRun(t, asYAML)
 	tr.ObjectMeta = objectMeta
 	return tr
+}
+
+func mustParseCustomRunWithObjectMeta(t *testing.T, objectMeta metav1.ObjectMeta, asYAML string) *v1beta1.CustomRun {
+	r := parse.MustParseCustomRun(t, asYAML)
+	r.ObjectMeta = objectMeta
+	return r
 }
 
 func mustParseRunWithObjectMeta(t *testing.T, objectMeta metav1.ObjectMeta, asYAML string) *v1alpha1.Run {
@@ -9876,7 +10074,7 @@ metadata:
   name: mytask
   namespace: foo
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   params:
@@ -9890,13 +10088,13 @@ spec:
         echo "$(params.platform) and $(params.browser)" and $(params.version)"
 `)
 
-	expectedRuns := []*v1alpha1.Run{
-		mustParseRunWithObjectMeta(t,
+	expectedRuns := []*v1beta1.CustomRun{
+		mustParseCustomRunWithObjectMeta(t,
 			taskRunObjectMeta("pr-platforms-and-browsers-0", "foo",
 				"pr", "p", "platforms-and-browsers", false),
 			`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   params:
@@ -9911,12 +10109,12 @@ spec:
   taskRef:
     name: mytask
 `),
-		mustParseRunWithObjectMeta(t,
+		mustParseCustomRunWithObjectMeta(t,
 			taskRunObjectMeta("pr-platforms-and-browsers-1", "foo",
 				"pr", "p", "platforms-and-browsers", false),
 			`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   params:
@@ -9931,12 +10129,12 @@ spec:
   taskRef:
     name: mytask
 `),
-		mustParseRunWithObjectMeta(t,
+		mustParseCustomRunWithObjectMeta(t,
 			taskRunObjectMeta("pr-platforms-and-browsers-2", "foo",
 				"pr", "p", "platforms-and-browsers", false),
 			`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   params:
@@ -9951,12 +10149,12 @@ spec:
   taskRef:
     name: mytask
 `),
-		mustParseRunWithObjectMeta(t,
+		mustParseCustomRunWithObjectMeta(t,
 			taskRunObjectMeta("pr-platforms-and-browsers-3", "foo",
 				"pr", "p", "platforms-and-browsers", false),
 			`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   params:
@@ -9971,12 +10169,12 @@ spec:
   taskRef:
     name: mytask
 `),
-		mustParseRunWithObjectMeta(t,
+		mustParseCustomRunWithObjectMeta(t,
 			taskRunObjectMeta("pr-platforms-and-browsers-4", "foo",
 				"pr", "p", "platforms-and-browsers", false),
 			`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   params:
@@ -9991,12 +10189,12 @@ spec:
   taskRef:
     name: mytask
 `),
-		mustParseRunWithObjectMeta(t,
+		mustParseCustomRunWithObjectMeta(t,
 			taskRunObjectMeta("pr-platforms-and-browsers-5", "foo",
 				"pr", "p", "platforms-and-browsers", false),
 			`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   params:
@@ -10011,12 +10209,12 @@ spec:
   taskRef:
     name: mytask
 `),
-		mustParseRunWithObjectMeta(t,
+		mustParseCustomRunWithObjectMeta(t,
 			taskRunObjectMeta("pr-platforms-and-browsers-6", "foo",
 				"pr", "p", "platforms-and-browsers", false),
 			`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   params:
@@ -10031,12 +10229,12 @@ spec:
   taskRef:
     name: mytask
 `),
-		mustParseRunWithObjectMeta(t,
+		mustParseCustomRunWithObjectMeta(t,
 			taskRunObjectMeta("pr-platforms-and-browsers-7", "foo",
 				"pr", "p", "platforms-and-browsers", false),
 			`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   params:
@@ -10051,12 +10249,12 @@ spec:
   taskRef:
     name: mytask
 `),
-		mustParseRunWithObjectMeta(t,
+		mustParseCustomRunWithObjectMeta(t,
 			taskRunObjectMeta("pr-platforms-and-browsers-8", "foo",
 				"pr", "p", "platforms-and-browsers", false),
 			`
 spec:
-  ref:
+  customRef:
     apiVersion: example.dev/v0
     kind: Example
   params:
@@ -10148,40 +10346,40 @@ status:
     reason: "Running"
     message: "Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 0"
   childReferences:
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-0
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-1
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-2
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-3
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-4
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-5
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-6
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-7
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-8
     pipelineTaskName: platforms-and-browsers
   taskRuns: {}
@@ -10306,40 +10504,40 @@ status:
     kind: TaskRun
     name: pr-unmatrixed-pt
     pipelineTaskName: unmatrixed-pt
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-0
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-1
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-2
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-3
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-4
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-5
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-6
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-7
     pipelineTaskName: platforms-and-browsers
-  - apiVersion: tekton.dev/v1alpha1
-    kind: Run
+  - apiVersion: tekton.dev/v1beta1
+    kind: CustomRun
     name: pr-platforms-and-browsers-8
     pipelineTaskName: platforms-and-browsers
   taskRuns: {}
@@ -10370,7 +10568,7 @@ spec:
 			defer prt.Cancel()
 
 			_, clients := prt.reconcileRun("foo", "pr", []string{}, false)
-			runs, err := clients.Pipeline.TektonV1alpha1().Runs("foo").List(prt.TestAssets.Ctx, metav1.ListOptions{
+			runs, err := clients.Pipeline.TektonV1beta1().CustomRuns("foo").List(prt.TestAssets.Ctx, metav1.ListOptions{
 				LabelSelector: fmt.Sprintf("tekton.dev/pipelineRun=pr,tekton.dev/pipeline=%s,tekton.dev/pipelineTask=platforms-and-browsers", tt.name),
 				Limit:         1,
 			})

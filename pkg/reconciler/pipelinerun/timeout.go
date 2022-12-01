@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"gomodules.xyz/jsonpatch/v2"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -56,12 +55,12 @@ func init() {
 		{
 			Operation: "add",
 			Path:      "/spec/status",
-			Value:     v1alpha1.RunSpecStatusCancelled,
+			Value:     v1beta1.CustomRunSpecStatusCancelled,
 		},
 		{
 			Operation: "add",
 			Path:      "/spec/statusMessage",
-			Value:     v1alpha1.RunCancelledByPipelineTimeoutMsg,
+			Value:     v1beta1.CustomRunCancelledByPipelineTimeoutMsg,
 		}})
 	if err != nil {
 		log.Fatalf("failed to marshal Run timeout patch bytes: %v", err)
@@ -99,7 +98,7 @@ func timeoutPipelineRun(ctx context.Context, logger *zap.SugaredLogger, pr *v1be
 }
 
 func timeoutRun(ctx context.Context, runName string, namespace string, clientSet clientset.Interface) error {
-	_, err := clientSet.TektonV1alpha1().Runs(namespace).Patch(ctx, runName, types.JSONPatchType, timeoutRunPatchBytes, metav1.PatchOptions{}, "")
+	_, err := clientSet.TektonV1beta1().CustomRuns(namespace).Patch(ctx, runName, types.JSONPatchType, timeoutRunPatchBytes, metav1.PatchOptions{}, "")
 	return err
 }
 

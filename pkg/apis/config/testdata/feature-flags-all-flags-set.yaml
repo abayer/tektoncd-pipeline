@@ -30,3 +30,4 @@ data:
   enable-spire: "true"
   resource-verification-mode: "enforce"
   enable-provenance-in-status: "true"
+  legacy-custom-tasks: "true"

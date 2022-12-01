@@ -622,8 +622,8 @@ func TestWaitCustomTask_PipelineRun(t *testing.T) {
 		prTimeout             *metav1.Duration
 		prConditionAccessorFn func(string) ConditionAccessorFn
 		wantPrCondition       apis.Condition
-		wantRunStatus         v1alpha1.RunStatus
-		wantRetriesStatus     []v1alpha1.RunStatus
+		wantRunStatus         v1beta1.CustomRunStatus
+		wantRetriesStatus     []v1beta1.CustomRunStatus
 	}{{
 		name:                  "Wait Task Has Succeeded",
 		runDuration:           "1s",
@@ -634,7 +634,7 @@ func TestWaitCustomTask_PipelineRun(t *testing.T) {
 			Status: corev1.ConditionTrue,
 			Reason: "Succeeded",
 		},
-		wantRunStatus: v1alpha1.RunStatus{
+		wantRunStatus: v1beta1.CustomRunStatus{
 			Status: v1.Status{
 				Conditions: []apis.Condition{
 					{
@@ -656,7 +656,7 @@ func TestWaitCustomTask_PipelineRun(t *testing.T) {
 			Status: corev1.ConditionUnknown,
 			Reason: "Running",
 		},
-		wantRunStatus: v1alpha1.RunStatus{
+		wantRunStatus: v1beta1.CustomRunStatus{
 			Status: v1.Status{
 				Conditions: []apis.Condition{
 					{
@@ -678,7 +678,7 @@ func TestWaitCustomTask_PipelineRun(t *testing.T) {
 			Status: corev1.ConditionFalse,
 			Reason: "PipelineRunTimeout",
 		},
-		wantRunStatus: v1alpha1.RunStatus{
+		wantRunStatus: v1beta1.CustomRunStatus{
 			Status: v1.Status{
 				Conditions: []apis.Condition{
 					{
@@ -700,7 +700,7 @@ func TestWaitCustomTask_PipelineRun(t *testing.T) {
 			Status: corev1.ConditionFalse,
 			Reason: "Failed",
 		},
-		wantRunStatus: v1alpha1.RunStatus{
+		wantRunStatus: v1beta1.CustomRunStatus{
 			Status: v1.Status{
 				Conditions: []apis.Condition{
 					{
@@ -723,7 +723,7 @@ func TestWaitCustomTask_PipelineRun(t *testing.T) {
 			Status: corev1.ConditionFalse,
 			Reason: "Failed",
 		},
-		wantRunStatus: v1alpha1.RunStatus{
+		wantRunStatus: v1beta1.CustomRunStatus{
 			Status: v1.Status{
 				Conditions: []apis.Condition{
 					{
@@ -735,7 +735,7 @@ func TestWaitCustomTask_PipelineRun(t *testing.T) {
 				ObservedGeneration: 1,
 			},
 		},
-		wantRetriesStatus: []v1alpha1.RunStatus{
+		wantRetriesStatus: []v1beta1.CustomRunStatus{
 			{
 				Status: v1.Status{
 					Conditions: []apis.Condition{
@@ -876,8 +876,8 @@ func TestWaitCustomTask_PipelineRun(t *testing.T) {
 				wantRunName = gotPipelineRun.Status.ChildReferences[0].Name
 				wantPipelineRun.Status.PipelineRunStatusFields.ChildReferences = []v1beta1.ChildStatusReference{{
 					TypeMeta: runtime.TypeMeta{
-						APIVersion: "tekton.dev/v1alpha1",
-						Kind:       "Run",
+						APIVersion: "tekton.dev/v1beta1",
+						Kind:       "CustomRun",
 					},
 					Name:             wantRunName,
 					PipelineTaskName: "wait",
