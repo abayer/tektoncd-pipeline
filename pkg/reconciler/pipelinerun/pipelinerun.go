@@ -62,6 +62,7 @@ import (
 	k8slabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
@@ -1462,11 +1463,12 @@ func filterTaskRunsForPipelineRunStatus(logger *zap.SugaredLogger, pr *v1beta1.P
 }
 
 // filterRunsForPipelineRunStatus filters the given slice of run objects, returning information only those owned by the given PipelineRun.
-func filterRunsForPipelineRunStatus(logger *zap.SugaredLogger, pr *v1beta1.PipelineRun, runObjects []v1beta1.RunObject) ([]string, []string, []schema.GroupVersionKind, []*v1beta1.CustomRunStatus) {
+func filterRunsForPipelineRunStatus(logger *zap.SugaredLogger, pr *v1beta1.PipelineRun, runObjects []v1beta1.RunObject) ([]string, []string, []schema.GroupVersionKind, []*v1beta1.CustomRunStatus, []types.UID) {
 	var names []string
 	var taskLabels []string
 	var gvks []schema.GroupVersionKind
 	var statuses []*v1beta1.CustomRunStatus
+	var uids []types.UID
 
 	// Loop over all the run objects associated to Tasks
 	for _, runObj := range runObjects {
@@ -1479,6 +1481,7 @@ func filterRunsForPipelineRunStatus(logger *zap.SugaredLogger, pr *v1beta1.Pipel
 
 		names = append(names, runObj.GetObjectMeta().GetName())
 		taskLabels = append(taskLabels, runObj.GetObjectMeta().GetLabels()[pipeline.PipelineTaskLabelKey])
+		uids = append(uids, runObj.GetObjectMeta().GetUID())
 
 		switch run := runObj.(type) {
 		case *v1beta1.CustomRun:
@@ -1493,7 +1496,7 @@ func filterRunsForPipelineRunStatus(logger *zap.SugaredLogger, pr *v1beta1.Pipel
 		}
 	}
 
-	return names, taskLabels, gvks, statuses
+	return names, taskLabels, gvks, statuses, uids
 }
 
 // updatePipelineRunStatusFromTaskRuns takes a PipelineRun and a list of TaskRuns within that PipelineRun, and updates
@@ -1522,6 +1525,7 @@ func updatePipelineRunStatusFromTaskRuns(logger *zap.SugaredLogger, pr *v1beta1.
 			pr.Status.TaskRuns[taskrun.Name] = &v1beta1.PipelineRunTaskRunStatus{
 				PipelineTaskName: pipelineTaskName,
 				Status:           &taskrun.Status,
+				UID:              taskrun.UID,
 			}
 		}
 	}
@@ -1537,18 +1541,20 @@ func updatePipelineRunStatusFromCustomRunsOrRuns(logger *zap.SugaredLogger, pr *
 	}
 
 	// Get the names, their task label values, and their status objects for all CustomRuns or Runs associated with the PipelineRun
-	names, taskLabels, _, statuses := filterRunsForPipelineRunStatus(logger, pr, runObjects)
+	names, taskLabels, _, statuses, uids := filterRunsForPipelineRunStatus(logger, pr, runObjects)
 
 	// Loop over all the elements and populate the status map
 	for idx := range names {
 		name := names[idx]
 		taskLabel := taskLabels[idx]
 		crStatus := statuses[idx]
+		uid := uids[idx]
 		if _, ok := pr.Status.Runs[name]; !ok {
 			// This run was missing from the status.
 			pr.Status.Runs[name] = &v1beta1.PipelineRunRunStatus{
 				PipelineTaskName: taskLabel,
 				Status:           crStatus,
+				UID:              uid,
 			}
 		}
 	}
@@ -1588,18 +1594,20 @@ func updatePipelineRunStatusFromChildRefs(logger *zap.SugaredLogger, pr *v1beta1
 				},
 				Name:             tr.Name,
 				PipelineTaskName: pipelineTaskName,
+				UID:              tr.UID,
 			}
 		}
 	}
 
 	// Get the names, their task label values, and their group/version/kind info for all CustomRuns or Runs associated with the PipelineRun
-	names, taskLabels, gvks, _ := filterRunsForPipelineRunStatus(logger, pr, runObjects)
+	names, taskLabels, gvks, _, uids := filterRunsForPipelineRunStatus(logger, pr, runObjects)
 
 	// Loop over that data and populate the child references
 	for idx := range names {
 		name := names[idx]
 		taskLabel := taskLabels[idx]
 		gvk := gvks[idx]
+		uid := uids[idx]
 
 		if _, ok := childRefByName[name]; !ok {
 			// This run was missing from the status.
@@ -1614,6 +1622,7 @@ func updatePipelineRunStatusFromChildRefs(logger *zap.SugaredLogger, pr *v1beta1
 				},
 				Name:             name,
 				PipelineTaskName: taskLabel,
+				UID:              uid,
 			}
 		}
 	}

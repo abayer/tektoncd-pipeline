@@ -33,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 )
@@ -41,17 +42,20 @@ var (
 	childRefTaskRuns = []v1beta1.ChildStatusReference{{
 		TypeMeta:         runtime.TypeMeta{Kind: "TaskRun", APIVersion: "tekton.dev/v1beta1"},
 		Name:             "tr-0",
+		UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 		PipelineTaskName: "ptn",
 		WhenExpressions:  []v1beta1.WhenExpression{{Input: "default-value", Operator: "in", Values: []string{"val"}}},
 	}}
 	childRefRuns = []v1beta1.ChildStatusReference{{
 		TypeMeta:         runtime.TypeMeta{Kind: "Run", APIVersion: "tekton.dev/v1alpha1"},
 		Name:             "r-0",
+		UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 		PipelineTaskName: "ptn-0",
 		WhenExpressions:  []v1beta1.WhenExpression{{Input: "default-value-0", Operator: "in", Values: []string{"val-0", "val-1"}}},
 	}}
 	trs = &v1beta1.PipelineRunTaskRunStatus{
 		PipelineTaskName: "ptn",
+		UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 		Status: &v1beta1.TaskRunStatus{
 			TaskRunStatusFields: v1beta1.TaskRunStatusFields{
 				PodName: "pod-name",
@@ -110,6 +114,7 @@ var (
 	}
 	rrs = &v1beta1.PipelineRunRunStatus{
 		PipelineTaskName: "ptn-0",
+		UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 		Status: &runv1beta1.CustomRunStatus{
 			CustomRunStatusFields: runv1beta1.CustomRunStatusFields{
 				Results: []runv1beta1.CustomRunResult{{
@@ -628,8 +633,8 @@ func TestPipelineRunConversionEmbeddedStatusConvertTo(t *testing.T) {
 				Name:      "foo",
 				Namespace: "bar",
 				Annotations: map[string]string{
-					"tekton.dev/v1beta1Runs":     `{"r-0":{"pipelineTaskName":"ptn-0","status":{"results":[{"name":"foo","value":"bar"}],"extraFields":null},"whenExpressions":[{"input":"default-value-0","operator":"in","values":["val-0","val-1"]}]}}`,
-					"tekton.dev/v1beta1TaskRuns": `{"tr-0":{"pipelineTaskName":"ptn","status":{"podName":"pod-name","steps":[{"running":{"startedAt":null},"name":"running-step","container":"step-running-step"}],"cloudEvents":[{"target":"http//sink1","status":{"condition":"Unknown","message":"","retryCount":0}},{"target":"http//sink2","status":{"condition":"Unknown","message":"","retryCount":0}}],"retriesStatus":[{"conditions":[{"type":"Succeeded","status":"False","lastTransitionTime":null}],"podName":""}],"resourcesResult":[{"key":"digest","value":"sha256:1234","resourceName":"source-image"}],"sidecars":[{"terminated":{"exitCode":1,"reason":"Error","message":"Error","startedAt":null,"finishedAt":null},"name":"error","container":"sidecar-error","imageID":"image-id"}]},"whenExpressions":[{"input":"default-value","operator":"in","values":["val"]}]}}`,
+					"tekton.dev/v1beta1Runs":     `{"r-0":{"pipelineTaskName":"ptn-0","status":{"results":[{"name":"foo","value":"bar"}],"extraFields":null},"whenExpressions":[{"input":"default-value-0","operator":"in","values":["val-0","val-1"]}],"uid":"22222222-2222-2222-2222-222222222222"}}`,
+					"tekton.dev/v1beta1TaskRuns": `{"tr-0":{"pipelineTaskName":"ptn","status":{"podName":"pod-name","steps":[{"running":{"startedAt":null},"name":"running-step","container":"step-running-step"}],"cloudEvents":[{"target":"http//sink1","status":{"condition":"Unknown","message":"","retryCount":0}},{"target":"http//sink2","status":{"condition":"Unknown","message":"","retryCount":0}}],"retriesStatus":[{"conditions":[{"type":"Succeeded","status":"False","lastTransitionTime":null}],"podName":""}],"resourcesResult":[{"key":"digest","value":"sha256:1234","resourceName":"source-image"}],"sidecars":[{"terminated":{"exitCode":1,"reason":"Error","message":"Error","startedAt":null,"finishedAt":null},"name":"error","container":"sidecar-error","imageID":"image-id"}]},"whenExpressions":[{"input":"default-value","operator":"in","values":["val"]}],"uid":"22222222-2222-2222-2222-222222222222"}}`,
 				},
 			},
 			Spec: v1.PipelineRunSpec{
@@ -642,10 +647,12 @@ func TestPipelineRunConversionEmbeddedStatusConvertTo(t *testing.T) {
 					ChildReferences: []v1.ChildStatusReference{{
 						TypeMeta:         runtime.TypeMeta{Kind: "TaskRun", APIVersion: "tekton.dev/v1beta1"},
 						Name:             "tr-0",
+						UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 						PipelineTaskName: "ptn",
 						WhenExpressions:  []v1.WhenExpression{{Input: "default-value", Operator: "in", Values: []string{"val"}}},
 					}, {TypeMeta: runtime.TypeMeta{Kind: "Run", APIVersion: "tekton.dev/v1alpha1"},
 						Name:             "r-0",
+						UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 						PipelineTaskName: "ptn-0",
 						WhenExpressions:  []v1.WhenExpression{{Input: "default-value-0", Operator: "in", Values: []string{"val-0", "val-1"}}},
 					}},
@@ -682,8 +689,8 @@ func TestPipelineRunConversionEmbeddedStatusConvertFrom(t *testing.T) {
 				Name:      "foo",
 				Namespace: "bar",
 				Annotations: map[string]string{
-					"tekton.dev/v1beta1Runs":     `{"r-0":{"pipelineTaskName":"ptn-0","status":{"results":[{"name":"foo","value":"bar"}],"extraFields":null},"whenExpressions":[{"input":"default-value-0","operator":"in","values":["val-0","val-1"]}]}}`,
-					"tekton.dev/v1beta1TaskRuns": `{"tr-0":{"pipelineTaskName":"ptn","status":{"podName":"pod-name","steps":[{"running":{"startedAt":null},"name":"running-step","container":"step-running-step"}],"cloudEvents":[{"target":"http//sink1","status":{"condition":"Unknown","message":"","retryCount":0}},{"target":"http//sink2","status":{"condition":"Unknown","message":"","retryCount":0}}],"retriesStatus":[{"conditions":[{"type":"Succeeded","status":"False","lastTransitionTime":null}],"podName":""}],"resourcesResult":[{"key":"digest","value":"sha256:1234","resourceName":"source-image"}],"sidecars":[{"terminated":{"exitCode":1,"reason":"Error","message":"Error","startedAt":null,"finishedAt":null},"name":"error","container":"sidecar-error","imageID":"image-id"}]},"whenExpressions":[{"input":"default-value","operator":"in","values":["val"]}]}}`,
+					"tekton.dev/v1beta1Runs":     `{"r-0":{"pipelineTaskName":"ptn-0","status":{"results":[{"name":"foo","value":"bar"}],"extraFields":null},"whenExpressions":[{"input":"default-value-0","operator":"in","values":["val-0","val-1"]}],"uid":"22222222-2222-2222-2222-222222222222"}}`,
+					"tekton.dev/v1beta1TaskRuns": `{"tr-0":{"pipelineTaskName":"ptn","status":{"podName":"pod-name","steps":[{"running":{"startedAt":null},"name":"running-step","container":"step-running-step"}],"cloudEvents":[{"target":"http//sink1","status":{"condition":"Unknown","message":"","retryCount":0}},{"target":"http//sink2","status":{"condition":"Unknown","message":"","retryCount":0}}],"retriesStatus":[{"conditions":[{"type":"Succeeded","status":"False","lastTransitionTime":null}],"podName":""}],"resourcesResult":[{"key":"digest","value":"sha256:1234","resourceName":"source-image"}],"sidecars":[{"terminated":{"exitCode":1,"reason":"Error","message":"Error","startedAt":null,"finishedAt":null},"name":"error","container":"sidecar-error","imageID":"image-id"}]},"whenExpressions":[{"input":"default-value","operator":"in","values":["val"]}],"uid":"22222222-2222-2222-2222-222222222222"}}`,
 				},
 			},
 			Spec: v1.PipelineRunSpec{
@@ -696,10 +703,12 @@ func TestPipelineRunConversionEmbeddedStatusConvertFrom(t *testing.T) {
 					ChildReferences: []v1.ChildStatusReference{{
 						TypeMeta:         runtime.TypeMeta{Kind: "TaskRun", APIVersion: "tekton.dev/v1beta1"},
 						Name:             "tr-0",
+						UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 						PipelineTaskName: "ptn",
 						WhenExpressions:  []v1.WhenExpression{{Input: "default-value", Operator: "in", Values: []string{"val"}}},
 					}, {TypeMeta: runtime.TypeMeta{Kind: "Run", APIVersion: "tekton.dev/v1alpha1"},
 						Name:             "r-0",
+						UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 						PipelineTaskName: "ptn-0",
 						WhenExpressions:  []v1.WhenExpression{{Input: "default-value-0", Operator: "in", Values: []string{"val-0", "val-1"}}},
 					}},

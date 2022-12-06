@@ -319,6 +319,7 @@ func (t *ResolvedPipelineTask) getChildRefForRun(runObj v1beta1.RunObject) v1bet
 		Name:             runObj.GetObjectMeta().GetName(),
 		PipelineTaskName: t.PipelineTask.Name,
 		WhenExpressions:  t.PipelineTask.WhenExpressions,
+		UID:              runObj.GetObjectMeta().GetUID(),
 	}
 }
 
@@ -331,6 +332,7 @@ func (t *ResolvedPipelineTask) getChildRefForTaskRun(taskRun *v1beta1.TaskRun) v
 		Name:             taskRun.Name,
 		PipelineTaskName: t.PipelineTask.Name,
 		WhenExpressions:  t.PipelineTask.WhenExpressions,
+		UID:              taskRun.UID,
 	}
 }
 

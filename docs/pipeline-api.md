@@ -1318,6 +1318,17 @@ string
 <p>WhenExpressions is the list of checks guarding the execution of the PipelineTask</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>uid</code><br/>
+<em>
+k8s.io/apimachinery/pkg/types.UID
+</em>
+</td>
+<td>
+<p>UID is the TaskRun or Run&rsquo;s UID</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="tekton.dev/v1.ConfigSource">ConfigSource
@@ -2011,6 +2022,17 @@ CustomRunStatus
 <p>WhenExpressions is the list of checks guarding the execution of the PipelineTask</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>uid</code><br/>
+<em>
+k8s.io/apimachinery/pkg/types.UID
+</em>
+</td>
+<td>
+<p>UID is the Run&rsquo;s UID</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="tekton.dev/v1.PipelineRunSpec">PipelineRunSpec
@@ -2381,6 +2403,17 @@ TaskRunStatus
 <td>
 <em>(Optional)</em>
 <p>WhenExpressions is the list of checks guarding the execution of the PipelineTask</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>uid</code><br/>
+<em>
+k8s.io/apimachinery/pkg/types.UID
+</em>
+</td>
+<td>
+<p>UID is the TaskRun&rsquo;s UID</p>
 </td>
 </tr>
 </tbody>
@@ -8103,6 +8136,17 @@ string
 <p>WhenExpressions is the list of checks guarding the execution of the PipelineTask</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>uid</code><br/>
+<em>
+k8s.io/apimachinery/pkg/types.UID
+</em>
+</td>
+<td>
+<p>UID is the TaskRun or Run&rsquo;s UID</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="tekton.dev/v1beta1.CloudEventCondition">CloudEventCondition
@@ -9362,6 +9406,17 @@ CustomRunStatus
 <p>WhenExpressions is the list of checks guarding the execution of the PipelineTask</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>uid</code><br/>
+<em>
+k8s.io/apimachinery/pkg/types.UID
+</em>
+</td>
+<td>
+<p>UID is the TaskRun&rsquo;s UID</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="tekton.dev/v1beta1.PipelineRunSpec">PipelineRunSpec
@@ -9806,6 +9861,17 @@ TaskRunStatus
 <td>
 <em>(Optional)</em>
 <p>WhenExpressions is the list of checks guarding the execution of the PipelineTask</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>uid</code><br/>
+<em>
+k8s.io/apimachinery/pkg/types.UID
+</em>
+</td>
+<td>
+<p>UID is the TaskRun&rsquo;s UID</p>
 </td>
 </tr>
 </tbody>

@@ -31,6 +31,7 @@ import (
 	"github.com/tektoncd/pipeline/pkg/remote"
 	"github.com/tektoncd/pipeline/pkg/trustedresources"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/kmeta"
 )
@@ -667,6 +668,7 @@ func ResolvePipelineTask(
 	pipelineTask v1beta1.PipelineTask,
 	providedResources map[string]*resourcev1alpha1.PipelineResource,
 ) (*ResolvedPipelineTask, error) {
+
 	rpt := ResolvedPipelineTask{
 		PipelineTask: &pipelineTask,
 	}
@@ -692,6 +694,9 @@ func ResolvePipelineTask(
 		if run != nil {
 			rpt.RunObject = run
 		}
+		if run != nil {
+			rpt.RunObject = run
+		}
 	case rpt.IsMatrixed():
 		rpt.TaskRunNames = GetNamesOfTaskRuns(pipelineRun.Status.ChildReferences, pipelineTask.Name, pipelineRun.Name, pipelineTask.GetMatrixCombinationsCount())
 		for _, taskRunName := range rpt.TaskRunNames {
@@ -705,7 +710,47 @@ func ResolvePipelineTask(
 			return nil, err
 		}
 	}
+
+	existingPipelineTaskUIDs := getPipelineTaskUIDs(pipelineRun.Status)
+
+	for _, run := range append(rpt.RunObjects, rpt.RunObject) {
+		if run == nil {
+			continue
+		}
+		if existingUID, ok := existingPipelineTaskUIDs[run.GetObjectMeta().GetName()]; ok && existingUID != run.GetObjectMeta().GetUID() && existingUID != "" {
+			return nil, fmt.Errorf("mismatched UID for Run %s; expected %s, found %s", run.GetObjectMeta().GetName(), existingUID, run.GetObjectMeta().GetUID())
+		}
+	}
+
+	for _, tr := range append(rpt.TaskRuns, rpt.TaskRun) {
+		if tr == nil {
+			continue
+		}
+		if existingUID, ok := existingPipelineTaskUIDs[tr.Name]; ok && existingUID != tr.UID && existingUID != "" {
+			return nil, fmt.Errorf("mismatched UID for TaskRun %s; expected %s, found %s", tr.Name, existingUID, tr.UID)
+		}
+	}
+
 	return &rpt, nil
+}
+
+func getPipelineTaskUIDs(prs v1beta1.PipelineRunStatus) map[string]types.UID {
+	m := make(map[string]types.UID)
+
+	if len(prs.ChildReferences) > 0 {
+		for _, cr := range prs.ChildReferences {
+			m[cr.Name] = cr.UID
+		}
+		return m
+	}
+
+	for trName, trStatus := range prs.TaskRuns {
+		m[trName] = trStatus.UID
+	}
+	for runName, runStatus := range prs.Runs {
+		m[runName] = runStatus.UID
+	}
+	return m
 }
 
 func (t *ResolvedPipelineTask) resolvePipelineRunTaskWithTaskRun(

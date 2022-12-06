@@ -3515,6 +3515,7 @@ func TestPipelineRunState_GetChildReferences(t *testing.T) {
 			}},
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			childRefs := tc.state.GetChildReferences()

@@ -363,6 +363,7 @@ func (st *SkippedTask) convertFrom(ctx context.Context, source v1.SkippedTask) {
 func (csr ChildStatusReference) convertTo(ctx context.Context, sink *v1.ChildStatusReference) {
 	sink.TypeMeta = csr.TypeMeta
 	sink.Name = csr.Name
+	sink.UID = csr.UID
 	sink.PipelineTaskName = csr.PipelineTaskName
 	sink.WhenExpressions = nil
 	for _, we := range csr.WhenExpressions {
@@ -375,6 +376,7 @@ func (csr ChildStatusReference) convertTo(ctx context.Context, sink *v1.ChildSta
 func (csr *ChildStatusReference) convertFrom(ctx context.Context, source v1.ChildStatusReference) {
 	csr.TypeMeta = source.TypeMeta
 	csr.Name = source.Name
+	csr.UID = source.UID
 	csr.PipelineTaskName = source.PipelineTaskName
 	csr.WhenExpressions = nil
 	for _, we := range source.WhenExpressions {
@@ -413,6 +415,7 @@ func convertTaskRunsToChildReference(ctx context.Context, taskRuns map[string]*P
 		csr.TypeMeta.APIVersion = "tekton.dev/v1beta1"
 		csr.TypeMeta.Kind = "TaskRun"
 		csr.Name = name
+		csr.UID = status.UID
 		csr.PipelineTaskName = status.PipelineTaskName
 		csr.WhenExpressions = nil
 		for _, we := range status.WhenExpressions {
@@ -434,6 +437,7 @@ func convertRunsToChildReference(ctx context.Context, runs map[string]*PipelineR
 		csr.TypeMeta.APIVersion = "tekton.dev/v1alpha1"
 		csr.TypeMeta.Kind = "Run"
 		csr.Name = name
+		csr.UID = status.UID
 		csr.PipelineTaskName = status.PipelineTaskName
 		csr.WhenExpressions = nil
 		for _, we := range status.WhenExpressions {

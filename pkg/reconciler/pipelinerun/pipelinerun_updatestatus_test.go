@@ -61,6 +61,7 @@ func getUpdateStatusTaskRunsData(t *testing.T) updateStatusTaskRunsData {
 	prTask1Yaml := `
 pipelineTaskName: task-1
 status: {}
+uid: 33333333-3333-3333-3333-333333333333
 `
 	prTask2Yaml := `
 pipelineTaskName: task-2
@@ -68,6 +69,7 @@ pipelineTaskName: task-2
 	prTask3Yaml := `
 pipelineTaskName: task-3
 status: {}
+uid: 55555555-5555-5555-5555-555555555555
 `
 
 	prTask4Yaml := `
@@ -215,6 +217,7 @@ metadata:
   name: pr-task-1-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 33333333-3333-3333-3333-333333333333
 `)},
 			expectedPrStatus: prStatusRecoveredSimple,
 		}, {
@@ -228,6 +231,7 @@ metadata:
   name: pr-task-3-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 55555555-5555-5555-5555-555555555555
 `),
 			},
 			expectedPrStatus: prStatusFoundTaskRun,
@@ -309,6 +313,7 @@ func TestUpdatePipelineRunStatusFromRuns(t *testing.T) {
 				"pr-run-1-xxyyy": {
 					PipelineTaskName: "run-1",
 					Status:           &v1beta1.CustomRunStatus{},
+					UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 				},
 				"pr-run-2-xxyyy": {
 					PipelineTaskName: "run-2",
@@ -325,6 +330,7 @@ func TestUpdatePipelineRunStatusFromRuns(t *testing.T) {
 				"pr-run-1-xxyyy": {
 					PipelineTaskName: "run-1",
 					Status:           &v1beta1.CustomRunStatus{},
+					UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 				},
 				"pr-run-2-xxyyy": {
 					PipelineTaskName: "run-2",
@@ -333,6 +339,7 @@ func TestUpdatePipelineRunStatusFromRuns(t *testing.T) {
 				"pr-run-3-xxyyy": {
 					PipelineTaskName: "run-3",
 					Status:           &v1beta1.CustomRunStatus{},
+					UID:              types.UID("55555555-5555-5555-5555-555555555555"),
 				},
 			},
 		},
@@ -352,6 +359,7 @@ func TestUpdatePipelineRunStatusFromRuns(t *testing.T) {
 				"pr-run-1-xxyyy": {
 					PipelineTaskName: "run-1",
 					Status:           &v1beta1.CustomRunStatus{},
+					UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 				},
 			},
 		},
@@ -385,6 +393,7 @@ metadata:
   name: pr-run-1-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 22222222-2222-2222-2222-222222222222
 `)},
 			expectedPrStatus: prStatusRecoveredSimple,
 		}, {
@@ -397,6 +406,7 @@ metadata:
   name: pr-run-3-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 55555555-5555-5555-5555-555555555555
 `)},
 			expectedPrStatus: prStatusWithAllRuns,
 		}, {
@@ -452,6 +462,7 @@ apiVersion: tekton.dev/v1beta1
 kind: TaskRun
 name: pr-task-1-xxyyy
 pipelineTaskName: task-1
+uid: 33333333-3333-3333-3333-333333333333
 `
 
 	prTask2Yaml := `
@@ -480,6 +491,7 @@ apiVersion: tekton.dev/v1beta1
 kind: CustomRun
 name: pr-run-6-xxyyy
 pipelineTaskName: task-6
+uid: 22222222-2222-2222-2222-222222222222
 `
 
 	prTask3NoStatusYaml := `
@@ -487,6 +499,7 @@ apiVersion: tekton.dev/v1beta1
 kind: TaskRun
 name: pr-task-3-xxyyy
 pipelineTaskName: task-3
+uid: 55555555-5555-5555-5555-555555555555
 `
 
 	noTaskRuns := []v1beta1.ChildStatusReference{
@@ -627,6 +640,7 @@ func TestUpdatePipelineRunStatusFromChildRefs(t *testing.T) {
 				},
 				Name:             "pr-run-6-xxyyy",
 				PipelineTaskName: "task-6",
+				UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 			}},
 		},
 	}
@@ -640,6 +654,7 @@ metadata:
   name: pr-run-6-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 22222222-2222-2222-2222-222222222222
 `)}
 
 	tcs := []struct {
@@ -671,6 +686,7 @@ metadata:
   name: pr-task-1-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 33333333-3333-3333-3333-333333333333
 `)},
 			expectedPrStatus: prStatusRecoveredSimple,
 		}, {
@@ -689,6 +705,7 @@ metadata:
   name: pr-task-3-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 55555555-5555-5555-5555-555555555555
 `),
 			},
 			expectedPrStatus: prStatusFoundTaskRun,
@@ -731,6 +748,7 @@ metadata:
   name: pr-task-0-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 22222222-2222-2222-2222-222222222222
 `),
 				parse.MustParseV1beta1TaskRun(t, `
 metadata:
@@ -739,6 +757,7 @@ metadata:
   name: pr-task-1-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 33333333-3333-3333-3333-333333333333
 `),
 			},
 			runs: nil,
@@ -751,12 +770,14 @@ apiVersion: tekton.dev/v1beta1
 kind: TaskRun
 name: pr-task-0-xxyyy
 pipelineTaskName: task
+uid: 22222222-2222-2222-2222-222222222222
 `),
 						mustParseChildStatusReference(t, `
 apiVersion: tekton.dev/v1beta1
 kind: TaskRun
 name: pr-task-1-xxyyy
 pipelineTaskName: task
+uid: 33333333-3333-3333-3333-333333333333
 `),
 					},
 				},
@@ -842,6 +863,7 @@ metadata:
   name: pr-run-6-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 22222222-2222-2222-2222-222222222222
 `)}
 
 	singleRunWithStatus := []v1beta1.RunObject{parse.MustParseRun(t, `
@@ -851,6 +873,7 @@ metadata:
   name: pr-run-6-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 22222222-2222-2222-2222-222222222222
 status:
   conditions:
   - status: Unknown
@@ -877,6 +900,7 @@ metadata:
   name: pr-task-1-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 33333333-3333-3333-3333-333333333333
 `)},
 			expectedStatusCRs: childRefsPRStatusData.simple,
 			expectedStatusTRs: taskRunsPRStatusData.simple,
@@ -889,6 +913,7 @@ metadata:
 				"pr-run-6-xxyyy": {
 					PipelineTaskName: "task-6",
 					Status:           &v1beta1.CustomRunStatus{},
+					UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 				},
 			},
 		}, {
@@ -900,6 +925,7 @@ apiVersion: tekton.dev/v1alpha1
 kind: Run
 name: pr-run-6-xxyyy
 pipelineTaskName: task-6
+uid: 22222222-2222-2222-2222-222222222222
 `)},
 			expectedStatusRuns: map[string]*v1beta1.PipelineRunRunStatus{
 				"pr-run-6-xxyyy": {
@@ -915,6 +941,7 @@ pipelineTaskName: task-6
 							StartTime: &metav1.Time{Time: time.Date(2021, 12, 31, 23, 58, 59, 0, time.UTC)},
 						},
 					},
+					UID: types.UID("22222222-2222-2222-2222-222222222222"),
 				},
 			},
 		}, {
@@ -928,6 +955,7 @@ pipelineTaskName: task-6
 				"pr-run-6-xxyyy": {
 					PipelineTaskName: "task-6",
 					Status:           &v1beta1.CustomRunStatus{},
+					UID:              types.UID("22222222-2222-2222-2222-222222222222"),
 				},
 			},
 		},
@@ -1238,6 +1266,7 @@ metadata:
   name: pr-task-1-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 33333333-3333-3333-3333-333333333333
 `),
 		parse.MustParseV1beta1TaskRun(t, `
 metadata:
@@ -1246,6 +1275,7 @@ metadata:
   name: pr-task-3-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 55555555-5555-5555-5555-555555555555
 `),
 	}
 
@@ -1256,6 +1286,7 @@ metadata:
   name: pr-task-1-xxyyy
   ownerReferences:
   - uid: 22222222-2222-2222-2222-222222222222
+  uid: 66666666-6666-6666-6666-666666666666
 `)}
 
 	taskRunsWithNoOwner := []*v1beta1.TaskRun{parse.MustParseV1beta1TaskRun(t, `
@@ -1263,6 +1294,7 @@ metadata:
   labels:
     tekton.dev/pipelineTask: task-1
   name: pr-task-1-xxyyy
+  uid: 77777777-7777-7777-7777-777777777777
 `)}
 
 	allRuns := []v1beta1.RunObject{
@@ -1273,6 +1305,7 @@ metadata:
   name: pr-run-1-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 88888888-8888-8888-8888-888888888888
 `),
 		parse.MustParseCustomRun(t, `
 metadata:
@@ -1281,6 +1314,7 @@ metadata:
   name: pr-run-2-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 99999999-9999-9999-9999-999999999999
 `),
 		parse.MustParseCustomRun(t, `
 metadata:
@@ -1289,6 +1323,7 @@ metadata:
   name: pr-run-3-xxyyy
   ownerReferences:
   - uid: 11111111-1111-1111-1111-111111111111
+  uid: 12121212-1212-1212-1212-121212121212
 `),
 	}
 
@@ -1299,6 +1334,7 @@ metadata:
   name: pr-run-1-xxyyy
   ownerReferences:
   - uid: 22222222-2222-2222-2222-222222222222
+  uid: 13131313-1313-1313-1313-131313131313
 `)}
 
 	runsWithNoOwner := []v1beta1.RunObject{parse.MustParseCustomRun(t, `
@@ -1306,6 +1342,7 @@ metadata:
   labels:
     tekton.dev/pipelineTask: run-1
   name: pr-run-1-xxyyy
+  uid: 14141414-1414-1414-1414-141414141414
 `)}
 
 	return allTaskRuns, taskRunsFromAnotherPR, taskRunsWithNoOwner, allRuns, runsFromAnotherPR, runsWithNoOwner
