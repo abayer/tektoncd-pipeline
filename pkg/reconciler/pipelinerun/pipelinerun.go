@@ -1334,6 +1334,11 @@ func updatePipelineRunStatusFromChildObjects(ctx context.Context, logger *zap.Su
 	fullEmbedded := cfg.FeatureFlags.EmbeddedStatus == config.FullEmbeddedStatus || cfg.FeatureFlags.EmbeddedStatus == config.BothEmbeddedStatus
 	minimalEmbedded := cfg.FeatureFlags.EmbeddedStatus == config.MinimalEmbeddedStatus || cfg.FeatureFlags.EmbeddedStatus == config.BothEmbeddedStatus
 
+	if cfg.FeatureFlags.EmbeddedStatus == config.MinimalEmbeddedStatus {
+		pr.Status.TaskRuns = nil
+		pr.Status.Runs = nil
+	}
+
 	if minimalEmbedded {
 		updatePipelineRunStatusFromChildRefs(logger, pr, taskRuns, runObjects)
 	}
