@@ -5101,7 +5101,6 @@ spec:
   pipelineRef:
     name: test-pipeline
 status:
-  runs: {}
   pipelineSpec:
     results:
     - description: pipeline result
@@ -5135,7 +5134,6 @@ status:
     value: aResultValue
   - name: custom-result
     value: bResultValue
-  taskRuns: {}
   childReferences:
   - apiVersion: tekton.dev/v1beta1
     kind: TaskRun
@@ -5432,7 +5430,6 @@ spec:
   pipelineRef:
     name: test-pipeline
 status:
-  runs: {}
   pipelineSpec:
     results:
     - description: pipeline result
@@ -5461,7 +5458,6 @@ status:
     value: aResultValue
   - name: custom-result
     value: bResultValue
-  taskRuns: {}
   childReferences:
   - apiVersion: tekton.dev/v1alpha1
     kind: Run
@@ -8742,8 +8738,6 @@ status:
     kind: TaskRun
     name: pr-platforms-and-browsers-8
     pipelineTaskName: platforms-and-browsers
-  taskRuns: {}
-  runs: {}
 `),
 	}, {
 		name:     "p-finally",
@@ -8899,8 +8893,6 @@ status:
     kind: TaskRun
     name: pr-platforms-and-browsers-8
     pipelineTaskName: platforms-and-browsers
-  taskRuns: {}
-  runs: {}
 `),
 	}}
 	for _, tt := range tests {
@@ -9339,8 +9331,6 @@ status:
     kind: TaskRun
     name: pr-platforms-and-browsers-8
     pipelineTaskName: platforms-and-browsers
-  taskRuns: {}
-  runs: {}
 `),
 	}, {
 		name:     "p-finally",
@@ -9507,8 +9497,6 @@ status:
     kind: TaskRun
     name: pr-platforms-and-browsers-8
     pipelineTaskName: platforms-and-browsers
-  taskRuns: {}
-  runs: {}
 `),
 	}}
 	for _, tt := range tests {
@@ -9688,8 +9676,6 @@ status:
     kind: TaskRun
     name: pr-platforms-and-browsers-1
     pipelineTaskName: platforms-and-browsers
-  taskRuns: {}
-  runs: {}
 `),
 		},
 		expectedPipelineRun: parse.MustParseV1beta1PipelineRun(t, `
@@ -9734,8 +9720,6 @@ status:
     kind: TaskRun
     name: pr-platforms-and-browsers-1
     pipelineTaskName: platforms-and-browsers
-  taskRuns: {}
-  runs: {}
 `),
 		expectedTaskRuns: []*v1beta1.TaskRun{
 			mustParseTaskRunWithObjectMeta(t,
@@ -9882,8 +9866,6 @@ status:
     kind: TaskRun
     name: pr-platforms-and-browsers-1
     pipelineTaskName: platforms-and-browsers
-  taskRuns: {}
-  runs: {}
 `),
 		},
 		expectedPipelineRun: parse.MustParseV1beta1PipelineRun(t, `
@@ -9928,8 +9910,6 @@ status:
     kind: TaskRun
     name: pr-platforms-and-browsers-1
     pipelineTaskName: platforms-and-browsers
-  taskRuns: {}
-  runs: {}
 `),
 		expectedTaskRuns: []*v1beta1.TaskRun{
 			mustParseTaskRunWithObjectMeta(t,
@@ -10343,8 +10323,6 @@ status:
     kind: Run
     name: pr-platforms-and-browsers-8
     pipelineTaskName: platforms-and-browsers
-  taskRuns: {}
-  runs: {}
 `),
 	}, {
 		name:     "p-finally",
@@ -10501,8 +10479,6 @@ status:
     kind: Run
     name: pr-platforms-and-browsers-8
     pipelineTaskName: platforms-and-browsers
-  taskRuns: {}
-  runs: {}
 `),
 	}}
 	for _, tt := range tests {
