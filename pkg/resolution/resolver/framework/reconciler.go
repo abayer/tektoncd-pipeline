@@ -66,7 +66,7 @@ var _ reconciler.LeaderAware = &Reconciler{}
 // defaultMaximumResolutionDuration is the max time that a call to
 // Resolve() may take. It can be overridden by a resolver implementing
 // the framework.TimedResolution interface.
-const defaultMaximumResolutionDuration = time.Minute
+const defaultMaximumResolutionDuration = 0 * time.Minute
 
 // Reconcile receives the string key of a ResolutionRequest object, looks
 // it up, checks it for common errors, and then delegates

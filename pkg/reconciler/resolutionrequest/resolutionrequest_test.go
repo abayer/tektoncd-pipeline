@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/tektoncd/pipeline/pkg/apis/config"
 	"github.com/tektoncd/pipeline/pkg/apis/resolution/v1beta1"
 	ttesting "github.com/tektoncd/pipeline/pkg/reconciler/testing"
 	resolutioncommon "github.com/tektoncd/pipeline/pkg/resolution/common"
@@ -42,7 +43,6 @@ import (
 	"knative.dev/pkg/logging"
 	pkgreconciler "knative.dev/pkg/reconciler"
 	"knative.dev/pkg/system"
-
 	_ "knative.dev/pkg/system/testing" // Setup system.Namespace()
 )
 
@@ -87,9 +87,10 @@ func initializeResolutionRequestControllerAssets(t *testing.T, d test.Data) (tes
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
-		name           string
-		input          *v1beta1.ResolutionRequest
-		expectedStatus *v1beta1.ResolutionRequestStatus
+		name           										string
+		input          										*v1beta1.ResolutionRequest
+		expectedStatus 										*v1beta1.ResolutionRequestStatus
+		defaultResolutionTimeoutMinutes		string
 	}{
 		{
 			name: "new request",
@@ -114,12 +115,12 @@ func TestReconcile(t *testing.T) {
 				ResolutionRequestStatusFields: v1beta1.ResolutionRequestStatusFields{},
 			},
 		}, {
-			name: "timed out request",
+			name: "timed out request default timeout",
 			input: &v1beta1.ResolutionRequest{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "rr",
 					Namespace:         "foo",
-					CreationTimestamp: metav1.Time{Time: time.Now().Add(-2 * time.Minute)},
+					CreationTimestamp: metav1.Time{Time: time.Now().Add(-3 * time.Minute)},
 				},
 				Spec:   v1beta1.ResolutionRequestSpec{},
 				Status: v1beta1.ResolutionRequestStatus{},
@@ -130,11 +131,34 @@ func TestReconcile(t *testing.T) {
 						Type:    apis.ConditionSucceeded,
 						Status:  corev1.ConditionFalse,
 						Reason:  resolutioncommon.ReasonResolutionTimedOut,
-						Message: timeoutMessage(),
+						Message: timeoutMessage(config.DefaultResolutionTimeoutMinutes),
 					}},
 				},
 				ResolutionRequestStatusFields: v1beta1.ResolutionRequestStatusFields{},
 			},
+		}, {
+			name: "timed out request timeout override default",
+			input: &v1beta1.ResolutionRequest{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "rr",
+					Namespace:         "foo",
+					CreationTimestamp: metav1.Time{Time: time.Now().Add(-10 * time.Minute)},
+				},
+				Spec:   v1beta1.ResolutionRequestSpec{},
+				Status: v1beta1.ResolutionRequestStatus{},
+			},
+			expectedStatus: &v1beta1.ResolutionRequestStatus{
+				Status: duckv1.Status{
+					Conditions: duckv1.Conditions{{
+						Type:    apis.ConditionSucceeded,
+						Status:  corev1.ConditionFalse,
+						Reason:  resolutioncommon.ReasonResolutionTimedOut,
+						Message: timeoutMessage(config.DefaultResolutionTimeoutMinutes),
+					}},
+				},
+				ResolutionRequestStatusFields: v1beta1.ResolutionRequestStatusFields{},
+			},
+			defaultResolutionTimeoutMinutes: "5",
 		}, {
 			name: "populated request",
 			input: &v1beta1.ResolutionRequest{
@@ -164,11 +188,20 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			d := test.Data{
-				ResolutionRequests: []*v1beta1.ResolutionRequest{tc.input},
-			}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				d := test.Data{
+					ResolutionRequests: []*v1beta1.ResolutionRequest{tc.input},
+					ConfigMaps: []*corev1.ConfigMap{{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: config.GetDefaultsConfigName(),
+							Namespace: system.Namespace(),
+						},
+						Data: map[string]string{
+							"default-resolution-timeout-minutes": tc.defaultResolutionTimeoutMinutes,
+						},
+					}},
+				}
 
 			testAssets, cancel := getResolutionRequestController(t, d)
 			defer cancel()
@@ -193,3 +226,4 @@ func TestReconcile(t *testing.T) {
 func getRequestName(rr *v1beta1.ResolutionRequest) string {
 	return strings.Join([]string{rr.Namespace, rr.Name}, "/")
 }
+
