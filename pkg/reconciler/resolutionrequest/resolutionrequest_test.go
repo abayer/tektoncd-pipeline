@@ -87,10 +87,10 @@ func initializeResolutionRequestControllerAssets(t *testing.T, d test.Data) (tes
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
-		name           										string
-		input          										*v1beta1.ResolutionRequest
-		expectedStatus 										*v1beta1.ResolutionRequestStatus
-		defaultResolutionTimeoutMinutes		string
+		name                            string
+		input                           *v1beta1.ResolutionRequest
+		expectedStatus                  *v1beta1.ResolutionRequestStatus
+		defaultResolutionTimeoutMinutes string
 	}{
 		{
 			name: "new request",
@@ -188,20 +188,20 @@ func TestReconcile(t *testing.T) {
 		},
 	}
 
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				d := test.Data{
-					ResolutionRequests: []*v1beta1.ResolutionRequest{tc.input},
-					ConfigMaps: []*corev1.ConfigMap{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: config.GetDefaultsConfigName(),
-							Namespace: system.Namespace(),
-						},
-						Data: map[string]string{
-							"default-resolution-timeout-minutes": tc.defaultResolutionTimeoutMinutes,
-						},
-					}},
-				}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := test.Data{
+				ResolutionRequests: []*v1beta1.ResolutionRequest{tc.input},
+				ConfigMaps: []*corev1.ConfigMap{{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      config.GetDefaultsConfigName(),
+						Namespace: system.Namespace(),
+					},
+					Data: map[string]string{
+						"default-resolution-timeout-minutes": tc.defaultResolutionTimeoutMinutes,
+					},
+				}},
+			}
 
 			testAssets, cancel := getResolutionRequestController(t, d)
 			defer cancel()
@@ -226,4 +226,3 @@ func TestReconcile(t *testing.T) {
 func getRequestName(rr *v1beta1.ResolutionRequest) string {
 	return strings.Join([]string{rr.Namespace, rr.Name}, "/")
 }
-
