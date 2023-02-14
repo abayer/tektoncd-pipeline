@@ -21,7 +21,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/tektoncd/pipeline/pkg/apis/config"
 	pipelinev1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"github.com/tektoncd/pipeline/pkg/apis/resolution/v1beta1"
 	rrclient "github.com/tektoncd/pipeline/pkg/client/resolution/clientset/versioned"
@@ -79,6 +81,8 @@ func (r *CRDRequester) Submit(ctx context.Context, resolver ResolverName, req Re
 }
 
 func (r *CRDRequester) createResolutionRequest(ctx context.Context, resolver ResolverName, req Request) error {
+	cfg := config.FromContextOrDefaults(ctx)
+	timeout := time.Duration(cfg.Defaults.DefaultResolutionTimeoutMinutes) * time.Minute
 	rr := &v1beta1.ResolutionRequest{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "resolution.tekton.dev/v1beta1",
@@ -92,7 +96,8 @@ func (r *CRDRequester) createResolutionRequest(ctx context.Context, resolver Res
 			},
 		},
 		Spec: v1beta1.ResolutionRequestSpec{
-			Params: req.Params(),
+			Params:  req.Params(),
+			Timeout: &metav1.Duration{Duration: timeout},
 		},
 	}
 	appendOwnerReference(rr, req)

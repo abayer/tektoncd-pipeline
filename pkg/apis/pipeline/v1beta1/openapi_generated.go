@@ -5913,11 +5913,17 @@ func schema_pkg_apis_resolution_v1beta1_ResolutionRequestSpec(ref common.Referen
 							},
 						},
 					},
+					"timeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Timeout is the maximum time the resolver should spend on a particular request before aborting. This will generally be the same as the default-resolution-time-minutes value in the defaults configmap.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.Param"},
+			"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1.Param", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

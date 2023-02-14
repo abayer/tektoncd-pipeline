@@ -1751,6 +1751,10 @@
             "$ref": "#/definitions/v1beta1.Param"
           },
           "x-kubernetes-list-type": "atomic"
+        },
+        "timeout": {
+          "description": "Timeout is the maximum time the resolver should spend on a particular request before aborting. This will generally be the same as the default-resolution-time-minutes value in the defaults configmap.",
+          "$ref": "#/definitions/v1.Duration"
         }
       }
     },
